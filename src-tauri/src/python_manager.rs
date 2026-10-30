@@ -2,7 +2,7 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex, OnceLock};
 use tauri::{AppHandle, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::process::Child;
+use tokio::process::{Child, Command as AsyncCommand};
 use anyhow::Result;
 
 static PYTHON_PROCESS: OnceLock<Arc<Mutex<Option<Child>>>> = OnceLock::new();
@@ -16,9 +16,13 @@ impl PythonManager {
     }
 
     pub async fn start(app: &AppHandle) -> Result<String> {
-        let mut guard = Self::get_process_handle().lock().unwrap();
-        if guard.is_some() {
-            return Ok("Python backend already running".to_string());
+        // hold the lock only for the quick "is it running" check - it is never
+        // kept across awaits, which would make this future !Send
+        {
+            let guard = Self::get_process_handle().lock().unwrap();
+            if guard.is_some() {
+                return Ok("Python backend already running".to_string());
+            }
         }
 
         let app_dir = app
@@ -70,7 +74,7 @@ impl PythonManager {
         }
 
         let main_py = python_dir.join("api").join("main.py");
-        let mut child = Command::new(&venv_python)
+        let mut child = AsyncCommand::new(&venv_python)
             .arg(&main_py)
             .current_dir(&python_dir)
             .stdout(Stdio::piped())
@@ -93,15 +97,24 @@ impl PythonManager {
             }
         });
 
-        *guard = Some(child);
+        // store it in a tight scope so the guard dies before the await below
+        {
+            let mut guard = Self::get_process_handle().lock().unwrap();
+            *guard = Some(child);
+        }
 
         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
         Ok(format!("Python backend started on port {}", PYTHON_PORT))
     }
 
     pub async fn stop() -> Result<String> {
-        let mut guard = Self::get_process_handle().lock().unwrap();
-        if let Some(mut child) = guard.take() {
+        // take the child out of the slot before awaiting - holding the std
+        // mutex guard across an await makes the future !Send
+        let child = {
+            let mut guard = Self::get_process_handle().lock().unwrap();
+            guard.take()
+        };
+        if let Some(mut child) = child {
             child.kill().await?;
             child.wait().await?;
             Ok("Python backend stopped".to_string())
@@ -178,6 +191,18 @@ impl PythonManager {
         let resp = client
             .get(format!("http://localhost:{}/models", PYTHON_PORT))
             .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await?;
+        let json: serde_json::Value = resp.json().await?;
+        Ok(json)
+    }
+
+    pub async fn set_device(device: String) -> Result<serde_json::Value> {
+        let client = reqwest::Client::new();
+        let resp = client
+            .post(format!("http://localhost:{}/device", PYTHON_PORT))
+            .json(&serde_json::json!({ "device": device }))
+            .timeout(std::time::Duration::from_secs(120))
             .send()
             .await?;
         let json: serde_json::Value = resp.json().await?;

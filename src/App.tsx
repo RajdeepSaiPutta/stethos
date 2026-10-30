@@ -79,6 +79,7 @@ export function App() {
   const [fusionResult, setFusionResult] = useState<FusionResult | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [gpuInfo, setGpuInfo] = useState<any>(null)
+  const [deviceBusy, setDeviceBusy] = useState(false)
   const [modelsLoaded, setModelsLoaded] = useState<Record<string, boolean>>({})
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
@@ -116,6 +117,25 @@ export function App() {
     const interval = setInterval(checkHealth, 30000)
     return () => clearInterval(interval)
   }, [checkHealth])
+
+  // the cpu|gpu segmented control is a real switch: it pins the sidecar to
+  // a device (cpu) or back to auto (its best accelerator) and re-loads the
+  // plugins there. browser preview can't reach the bridge, so it stays a
+  // read-only indicator there.
+  const switchDevice = useCallback(async (want: 'cpu' | 'gpu') => {
+    const inside = insideTauri
+    if (!inside || deviceBusy) return
+    setDeviceBusy(true)
+    try {
+      const health = await invoke('set_device', { device: want === 'gpu' ? 'auto' : 'cpu' })
+      setGpuInfo(health)
+    } catch (e) {
+      console.error('Device switch failed:', e)
+      checkHealth()
+    } finally {
+      setDeviceBusy(false)
+    }
+  }, [deviceBusy, checkHealth])
 
   useEffect(() => {
     const unlisten = listen('python-output', (event: Event<string>) => {
@@ -208,6 +228,7 @@ export function App() {
   // the sidecar reports its torch device; anything beyond cpu is acceleration
   const deviceStr = gpuInfo?.device ?? (gpuInfo?.cuda_available ? 'cuda' : 'cpu')
   const gpuOn = deviceStr !== 'cpu'
+  const insideTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
 
   return (
     <div className="h-screen flex bg-[var(--bg)] text-[var(--text)] overflow-hidden">
@@ -289,9 +310,24 @@ export function App() {
                 {gpuInfo?.gpu_name}
               </span>
             )}
-            <div className="seg" title={gpuOn ? `Accelerator: ${gpuInfo?.gpu_name ?? 'GPU'}` : 'Running on CPU'}>
-              <span className={`seg-item ${!gpuOn ? 'is-active' : ''}`}>cpu</span>
-              <span className={`seg-item ${gpuOn ? 'is-active' : ''}`}>gpu</span>
+            <div
+              className="seg"
+              title={insideTauri
+                ? (gpuOn ? `Running on ${gpuInfo?.device}` : 'Running on CPU — click gpu to use the accelerator')
+                : 'Device is read-only in browser preview'}
+            >
+              <button
+                type="button"
+                className={`seg-item ${!gpuOn ? 'is-active' : ''}`}
+                disabled={deviceBusy}
+                onClick={() => switchDevice('cpu')}
+              >cpu</button>
+              <button
+                type="button"
+                className={`seg-item ${gpuOn ? 'is-active' : ''}`}
+                disabled={deviceBusy}
+                onClick={() => switchDevice('gpu')}
+              >gpu</button>
             </div>
           </div>
         </header>

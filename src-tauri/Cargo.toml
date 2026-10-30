@@ -1,5 +1,5 @@
 [package]
-name = "respiratory-ai-workstation"
+name = "stethos"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,18 +7,11 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [
-  "dialog-all",
-  "fs-all",
-  "shell-all",
-  "opener",
-  "process-relaunch",
-  "updater"
-] }
+tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-opener = "2"
-tauri-plugin-shell = { version = "2", features = ["open", "command"] }
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }

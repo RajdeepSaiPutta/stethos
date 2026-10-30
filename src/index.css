@@ -222,6 +222,14 @@ code, pre, kbd, .mono {
   .seg-item {
     @apply px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide rounded-[2px] transition-colors;
     color: var(--text-faint);
+    cursor: pointer;
+  }
+  .seg-item:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+  .seg-item:disabled.is-active {
+    opacity: 1;
   }
   .seg-item.is-active {
     background: var(--chrome-2);

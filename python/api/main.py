@@ -1,6 +1,5 @@
-"""
-FastAPI Server for Respiratory AI Workstation
-Local-only inference API for Tauri frontend
+"""stethos sidecar
+Local-only inference API for the stethos desktop shell.
 """
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
@@ -27,9 +26,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Respiratory AI Workstation API",
+    title="Stethos Sidecar API",
     version="0.1.0",
-    description="Local multimodal respiratory diagnostics API"
+    description="Local multimodal respiratory ML API"
 )
 
 app.add_middleware(
@@ -41,8 +40,22 @@ app.add_middleware(
 )
 
 # Device setup — accelerator first (cuda, then apple silicon mps), cpu as the
-# floor. Plugins receive this device and move their weights onto it.
-def _pick_device() -> torch.device:
+# floor. Plugins receive this device and move their weights onto it. A device
+# request can pin this down to a specific accelerator ("cuda" | "mps") or to
+# "cpu"; "auto" (or unset) takes the best available.
+DEVICE_OVERRIDE: Optional[str] = None
+
+
+def _pick_device(override: Optional[str] = None) -> torch.device:
+    if override == "cuda" and torch.cuda.is_available():
+        return torch.device("cuda")
+    if override == "mps":
+        mps = getattr(torch.backends, "mps", None)
+        if mps is not None and mps.is_available():
+            return torch.device("mps")
+    if override == "cpu":
+        return torch.device("cpu")
+    # auto: best available accelerator, cpu as the floor
     if torch.cuda.is_available():
         return torch.device("cuda")
     mps = getattr(torch.backends, "mps", None)
@@ -51,7 +64,7 @@ def _pick_device() -> torch.device:
     return torch.device("cpu")
 
 
-DEVICE = _pick_device()
+DEVICE = _pick_device(DEVICE_OVERRIDE)
 logger.info(f"Using device: {DEVICE}")
 
 # Model paths (relative to app data dir)
@@ -105,12 +118,36 @@ async def health_check():
     return {
         "status": "healthy",
         "device": str(DEVICE),
+        "device_override": DEVICE_OVERRIDE,
         "cuda_available": torch.cuda.is_available(),
         "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
         "gpu_memory_total_mb": torch.cuda.get_device_properties(0).total_memory / (1024**2) if torch.cuda.is_available() else 0,
         "loaded_plugins": [name for name, loaded in registry._loaded.items() if loaded],
         "available_plugins": [p.name for p in registry.list_plugins()]
     }
+
+
+class DeviceRequest(BaseModel):
+    # "auto" | "cuda" | "mps" | "cpu" — re-loads every plugin on the new device
+    device: str
+
+
+@app.post("/device")
+async def set_device(request: DeviceRequest):
+    global DEVICE_OVERRIDE, DEVICE
+    if request.device not in ("auto", "cuda", "mps", "cpu"):
+        raise HTTPException(status_code=400, detail=f"unknown device: {request.device}")
+    target = _pick_device(request.device if request.device != "auto" else None)
+    if str(target) == str(DEVICE) and request.device == DEVICE_OVERRIDE:
+        return await health_check()
+    logger.info(f"Switching device {DEVICE} -> {target} (requested: {request.device})")
+    for name in list(registry._plugins):
+        registry.unload(name)
+    DEVICE_OVERRIDE = request.device
+    DEVICE = target
+    for name in list(registry._plugins):
+        registry.load(name, DEVICE)
+    return await health_check()
 
 # List available models
 @app.get("/models")
@@ -143,7 +180,13 @@ async def run_inference(request: InferenceRequest):
         if not success:
             raise HTTPException(status_code=503, detail=f"Failed to load {request.modality} model")
 
-    input_data = InferenceInput(**request.dict())
+    input_data = InferenceInput(
+        modality=request.modality,
+        data_path=request.input_path,
+        options=request.options,
+        patient_id=request.patient_id,
+        study_id=request.study_id,
+    )
     output = plugin.run_inference(input_data)
     return output.dict()
 
