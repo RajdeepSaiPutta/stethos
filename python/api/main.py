@@ -40,8 +40,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Device setup
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Device setup — accelerator first (cuda, then apple silicon mps), cpu as the
+# floor. Plugins receive this device and move their weights onto it.
+def _pick_device() -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    mps = getattr(torch.backends, "mps", None)
+    if mps is not None and mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+DEVICE = _pick_device()
 logger.info(f"Using device: {DEVICE}")
 
 # Model paths (relative to app data dir)

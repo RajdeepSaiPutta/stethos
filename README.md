@@ -1,6 +1,6 @@
 # stethos
 
-StethOS - local-only multimodal respiratory diagnostics desktop app. breath sounds, chest x-ray, and spirometry go in; a fused risk assessment and a structured clinical report come out.
+Stethos - local-only multimodal respiratory diagnostics desktop app. breath sounds, chest x-ray, and spirometry go in; a fused risk assessment and a structured clinical report come out.
 
 built with tauri (rust shell) + react (frontend) + a python fastapi sidecar that runs all inference. nothing leaves this machine - no cloud calls, no telemetry.
 

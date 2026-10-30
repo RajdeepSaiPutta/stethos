@@ -35,6 +35,7 @@ export interface PluginInfo {
 }
 
 export interface HealthInfo {
+  device?: string
   cuda_available: boolean
   gpu_name?: string
   gpu_memory_total_mb?: number

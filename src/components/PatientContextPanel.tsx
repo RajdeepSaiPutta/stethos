@@ -27,16 +27,14 @@ export function PatientContextPanel({ context, onChange, compact = false }: Pati
   if (compact) {
     return (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-          <User className="w-4 h-4 text-emerald-400" />
-        </div>
+        <User className="w-3.5 h-3.5 text-[var(--text-faint)]" strokeWidth={1.8} />
         <div className="text-right">
-          <p className="text-xs font-medium text-white truncate max-w-[100px]">
-            {context.patient_id || 'No Patient'}
+          <p className="text-[11px] text-[var(--text)] truncate max-w-[100px] font-mono">
+            {context.patient_id || 'no patient'}
           </p>
-          <p className="text-[10px] text-gray-500">
+          <p className="text-[9.5px] font-mono text-[var(--text-faint)]">
             {context.age && `${context.age}yr `}{context.sex && `${context.sex} `}
-            {context.bmi && `BMI ${context.bmi}`}
+            {context.bmi && `bmi ${context.bmi}`}
           </p>
         </div>
       </div>
@@ -47,7 +45,7 @@ export function PatientContextPanel({ context, onChange, compact = false }: Pati
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="font-medium text-white flex items-center gap-2">
-          <User className="w-4 h-4 text-emerald-400" />
+          <User className="w-3.5 h-3.5 text-[var(--text-faint)]" strokeWidth={1.8} />
           Patient Context
         </h4>
         {editing ? (

@@ -2,26 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Stethos — workbench design.
+   Flat graphite chrome, dense type, one restrained accent.
+   The content is the hero; panels are boxes, not cards. */
+
 :root {
-  --bg: #0a0a0f;
-  --bg-elevated: #11111a;
-  --bg-card: #16161f;
-  --border: #2a2a3a;
-  --border-bright: #3a3a4a;
-  --text: #f0f0f5;
-  --text-muted: #8a8a9a;
-  --text-faint: #5a5a6a;
-  --accent: #00d4aa;
-  --accent-dim: #00d4aa33;
-  --accent-bright: #00ffcc;
-  --danger: #ef4444;
-  --danger-dim: #ef444433;
-  --warning: #f59e0b;
-  --warning-dim: #f59e0b33;
-  --info: #3b82f6;
-  --info-dim: #3b82f633;
-  --success: #22c55e;
-  --success-dim: #22c55e33;
+  --bg: #0f1114;            /* app workspace */
+  --chrome: #17191d;        /* rail / titlebar */
+  --chrome-2: #1c1f24;      /* hover layer */
+  --panel: #131519;         /* panel fill */
+  --inset: #0c0e11;         /* inset wells / previews */
+  --border: #26292f;
+  --border-soft: #202329;
+  --border-bright: #33373e;
+
+  --text: #e6e8ea;
+  --text-muted: #9aa0a8;
+  --text-faint: #62676e;
+
+  --accent: #e0526a;        /* single accent, used sparingly */
+  --accent-hover: #e9667c;
+  --accent-dim: rgba(224, 82, 106, 0.14);
+
+  --good: #58a672;
+  --warn: #c9964d;
+  --bad: #d15555;
 }
 
 * {
@@ -36,20 +41,22 @@ html, body, #root {
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.6;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-code, pre, kbd {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+code, pre, kbd, .mono {
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
 }
 
 ::selection {
   background: var(--accent-dim);
-  color: var(--accent-bright);
+  color: var(--text);
 }
 
 ::-webkit-scrollbar {
@@ -58,12 +65,12 @@ code, pre, kbd {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-bright);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -71,101 +78,173 @@ code, pre, kbd {
 }
 
 @layer components {
+  /* ---------- buttons: flat, small radius, quiet ---------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[3px] text-[12px] font-medium transition-colors duration-100 focus:outline-none focus:ring-1 disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
-    @apply btn bg-emerald-500 text-gray-950 hover:bg-emerald-400 active:bg-emerald-600 focus:ring-emerald-500;
+    @apply btn text-white;
+    background: var(--accent);
   }
+  .btn-primary:hover { background: var(--accent-hover); }
 
   .btn-secondary {
-    @apply btn bg-gray-800 text-gray-100 border border-gray-700 hover:bg-gray-700 active:bg-gray-600 focus:ring-gray-600;
+    @apply btn text-gray-200;
+    background: var(--chrome-2);
+    border: 1px solid var(--border-bright);
   }
+  .btn-secondary:hover { background: #23262c; }
 
   .btn-ghost {
-    @apply btn bg-transparent text-gray-300 hover:bg-gray-800 active:bg-gray-700 focus:ring-gray-700;
+    @apply btn text-gray-400 bg-transparent;
+  }
+  .btn-ghost:hover {
+    background: var(--chrome-2);
+    color: var(--text);
   }
 
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-500 active:bg-red-700 focus:ring-red-500;
+    @apply btn text-white;
+    background: var(--bad);
   }
 
-  .card {
-    @apply bg-gray-900/50 border border-gray-800 rounded-xl p-6 backdrop-blur-sm;
-  }
-
-  .card-elevated {
-    @apply bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-xl shadow-black/30;
-  }
-
-  .input {
-    @apply w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-150;
-  }
-
-  .label {
-    @apply block text-sm font-medium text-gray-300 mb-1.5;
-  }
-
-  .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-  }
-
-  .badge-success { @apply badge bg-green-500/20 text-green-400; }
-  .badge-warning { @apply badge bg-yellow-500/20 text-yellow-400; }
-  .badge-danger { @apply badge bg-red-500/20 text-red-400; }
-  .badge-info { @apply badge bg-blue-500/20 text-blue-400; }
-  .badge-neutral { @apply badge bg-gray-700 text-gray-300; }
-
+  /* ---------- panels: boxes with 1px rules, no glow ---------- */
   .panel {
-    @apply bg-gray-950 border border-gray-800 rounded-xl overflow-hidden;
+    @apply overflow-hidden;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
   }
 
   .panel-header {
-    @apply px-5 py-4 border-b border-gray-800 flex items-center justify-between;
+    @apply px-3.5 py-2.5 flex items-center justify-between gap-3;
+    border-bottom: 1px solid var(--border-soft);
   }
 
   .panel-title {
-    @apply text-lg font-semibold text-white;
+    @apply text-[12px] font-medium uppercase tracking-wider;
+    color: var(--text-muted);
   }
 
+  .card {
+    @apply p-4;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  .card-elevated {
+    @apply card;
+  }
+
+  /* ---------- inputs ---------- */
+  .input {
+    @apply w-full px-2.5 py-1.5 rounded-[3px] text-[12px] outline-none transition-colors duration-100 placeholder-gray-600 disabled:opacity-50 disabled:cursor-not-allowed;
+    background: var(--inset);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .input:focus {
+    border-color: var(--accent);
+  }
+
+  .label {
+    @apply block text-[11px] text-gray-500 mb-1;
+  }
+
+  /* ---------- badges: outline with a dot, not filled pills ---------- */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-[3px] text-[10.5px] font-mono tracking-wide;
+    border: 1px solid var(--border-bright);
+    color: var(--text-muted);
+  }
+  .badge::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 1px;
+    background: var(--text-faint);
+  }
+  .badge-success { color: #7cc78f; border-color: rgba(88, 166, 114, 0.35); }
+  .badge-success::before { background: var(--good); }
+  .badge-warning { color: #d9b170; border-color: rgba(201, 150, 77, 0.35); }
+  .badge-warning::before { background: var(--warn); }
+  .badge-danger { color: #e08a8a; border-color: rgba(209, 85, 85, 0.4); }
+  .badge-danger::before { background: var(--bad); }
+  .badge-info { color: var(--text-muted); }
+  .badge-neutral { color: var(--text-faint); }
+
+  /* ---------- type helpers ---------- */
   .section {
     @apply space-y-4;
   }
 
   .section-title {
-    @apply text-xl font-semibold text-white flex items-center gap-2;
+    @apply text-[11px] font-medium uppercase tracking-wider;
+    color: var(--text-faint);
+  }
+
+  .metric-label {
+    @apply text-[11px] uppercase tracking-wider;
+    color: var(--text-faint);
+  }
+
+  .metric-value {
+    @apply text-xl font-semibold;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   .metric-card {
     @apply card flex items-center justify-between gap-4;
   }
 
-  .metric-value {
-    @apply text-3xl font-bold text-white;
+  .metric-trend { @apply text-xs; }
+  .trend-up { color: var(--good); }
+  .trend-down { color: var(--bad); }
+  .trend-stable { color: var(--text-faint); }
+
+  /* ---------- floating hud pill (eov-style, over content) ---------- */
+  .hud {
+    @apply flex items-center gap-1 px-1.5 py-1;
+    background: rgba(28, 31, 36, 0.92);
+    border: 1px solid var(--border-bright);
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
   }
 
-  .metric-label {
-    @apply text-sm text-gray-400;
+  /* ---------- segmented device control (titlebar) ---------- */
+  .seg {
+    @apply flex items-center rounded-[3px] p-0.5;
+    background: var(--inset);
+    border: 1px solid var(--border);
+  }
+  .seg-item {
+    @apply px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide rounded-[2px] transition-colors;
+    color: var(--text-faint);
+  }
+  .seg-item.is-active {
+    background: var(--chrome-2);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--border-bright);
   }
 
-  .metric-trend {
-    @apply text-sm font-medium;
+  /* ---------- tables ---------- */
+  .table-row-hover:hover {
+    background: var(--chrome-2);
   }
 
-  .trend-up { @apply text-green-400; }
-  .trend-down { @apply text-red-400; }
-  .trend-stable { @apply text-gray-400; }
+  /* inset data well inside panels */
+  .inset-well {
+    background: var(--inset);
+    border: 1px solid var(--border-soft);
+    border-radius: 3px;
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
 }
 
 @keyframes spin {
@@ -173,23 +252,12 @@ code, pre, kbd {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-.animate-pulse-slow {
-  animation: pulse 2s ease-in-out infinite;
+  animation: fadeIn 0.25s ease-out forwards;
 }
 
 .animate-spin {
   animation: spin 1s linear infinite;
 }
-
-.stagger-1 { animation-delay: 50ms; }
-.stagger-2 { animation-delay: 100ms; }
-.stagger-3 { animation-delay: 150ms; }
-.stagger-4 { animation-delay: 200ms; }
-.stagger-5 { animation-delay: 250ms; }
-.stagger-6 { animation-delay: 300ms; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

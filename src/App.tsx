@@ -3,9 +3,8 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen, Event } from '@tauri-apps/api/event'
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog'
 import {
-  LayoutDashboard, Mic2, Image, Activity, Brain, FileText,
-  CheckCircle, ChevronRight, ChevronLeft, Stethoscope,
-  BrainCircuit, Zap, Settings2,
+  Mic2, Image, Activity, FileText, Stethoscope,
+  Layers, Settings2, PanelLeftOpen, PanelLeftClose,
 } from 'lucide-react'
 import { ModalityPanel } from './components/ModalityPanel'
 import { FusionPanel } from './components/FusionPanel'
@@ -46,11 +45,28 @@ interface PatientContext {
 
 type View = 'dashboard' | 'breath' | 'cxr' | 'spirometry' | 'fusion' | 'report' | 'models'
 
+const VIEW_TITLES: Record<View, string> = {
+  dashboard: 'Session',
+  breath: 'Breath Sounds',
+  cxr: 'Chest X-Ray',
+  spirometry: 'Spirometry',
+  fusion: 'Fusion',
+  report: 'Report',
+  models: 'Models',
+}
+
 const MODALITIES = [
-  { id: 'breath', label: 'Breath Sounds', icon: Mic2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-  { id: 'cxr', label: 'Chest X-Ray', icon: Image, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  { id: 'spirometry', label: 'Spirometry', icon: Activity, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+  { id: 'breath', label: 'Breath Sounds', icon: Mic2, hint: 'wav · mp3 · flac' },
+  { id: 'cxr', label: 'Chest X-Ray', icon: Image, hint: 'dcm · png · jpg' },
+  { id: 'spirometry', label: 'Spirometry', icon: Activity, hint: 'json · csv' },
 ] as const
+
+// every view except the three modality workspaces
+const OTHER_VIEWS: { id: View; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'fusion', label: 'Fusion', icon: Layers },
+  { id: 'report', label: 'Report', icon: FileText },
+  { id: 'models', label: 'Models', icon: Settings2 },
+]
 
 export function App() {
   const [view, setView] = useState<View>('dashboard')
@@ -68,6 +84,22 @@ export function App() {
 
   const checkHealth = useCallback(async () => {
     try {
+      const insideTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
+      if (!insideTauri) {
+        // browser preview (vite dev server): no tauri shell, so the sidecar
+        // bridge doesn't exist. show the state the app has on this machine
+        // (rtx 5070 sidecar verified) so the ui is fully browsable. the
+        // packaged app always uses the real health data below.
+        setGpuInfo({
+          status: 'healthy',
+          device: 'cuda',
+          cuda_available: true,
+          gpu_name: 'NVIDIA GeForce RTX 5070',
+          gpu_memory_total_mb: 11843,
+        })
+        setModelsLoaded({ breath: true, cxr: true, spirometry: true, fusion: true })
+        return
+      }
       const health = await invoke('python_health_check')
       setGpuInfo(health)
       const models = (await invoke('list_models')) as { plugins: { name: string; loaded: boolean }[] }
@@ -159,7 +191,7 @@ export function App() {
   const exportReport = async (format: 'pdf' | 'fhir' | 'dicom-sr' | 'json') => {
     const filePath = await saveDialog({
       filters: [{ name: format.toUpperCase(), extensions: [format === 'dicom-sr' ? 'dcm' : format] }],
-      defaultPath: `respiratory-report-${Date.now()}.${format === 'dicom-sr' ? 'dcm' : format}`
+      defaultPath: `stethos-report-${Date.now()}.${format === 'dicom-sr' ? 'dcm' : format}`
     })
     if (filePath) {
       const data = {
@@ -173,140 +205,107 @@ export function App() {
     }
   }
 
+  // the sidecar reports its torch device; anything beyond cpu is acceleration
+  const deviceStr = gpuInfo?.device ?? (gpuInfo?.cuda_available ? 'cuda' : 'cpu')
+  const gpuOn = deviceStr !== 'cpu'
+
   return (
-    <div className="h-screen flex bg-gray-950 text-gray-100 overflow-hidden">
-      {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-72' : 'w-20'} flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col transition-all duration-200`}>
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-          {sidebarOpen && (
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                <Stethoscope className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div>
-                <h1 className="font-bold text-white text-lg">StethOS</h1>
-                <p className="text-xs text-gray-500">Respiratory AI Workstation</p>
+    <div className="h-screen flex bg-[var(--bg)] text-[var(--text)] overflow-hidden">
+      {/* Workbench rail */}
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-11'} flex-shrink-0 bg-[var(--chrome)] flex flex-col transition-all duration-150`} style={{ borderRight: '1px solid var(--border)' }}>
+        <div className="h-10 flex items-center justify-between px-2.5 pr-1" style={{ borderBottom: '1px solid var(--border-soft)' }}>
+          {sidebarOpen ? (
+            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+              <Stethoscope className="w-3.5 h-3.5 text-[var(--accent)] flex-shrink-0" strokeWidth={2.2} />
+              <div className="min-w-0">
+                <div className="text-[13px] font-semibold leading-tight">Stethos</div>
+                <div className="text-[8.5px] uppercase tracking-[0.14em] text-[var(--text-faint)] leading-tight truncate">Respiratory ML Workstation</div>
               </div>
             </div>
+          ) : (
+            <Stethoscope className="w-4 h-4 text-[var(--accent)] mx-auto" strokeWidth={2.2} />
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+            className="p-1 rounded-[3px] hover:bg-[var(--chrome-2)] text-[var(--text-faint)] hover:text-[var(--text)] transition-colors flex-shrink-0"
             aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
-            {sidebarOpen ? <ChevronLeft className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
+            {sidebarOpen
+              ? <PanelLeftClose className="w-3.5 h-3.5" />
+              : <PanelLeftOpen className="w-3.5 h-3.5" />}
           </button>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          <button
-            onClick={() => setView('dashboard')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-              view === 'dashboard'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
-            {sidebarOpen && <span>Dashboard</span>}
-          </button>
-
+        <nav className="flex-1 px-1.5 py-2 space-y-0.5 overflow-y-auto">
+          {sidebarOpen && <p className="px-2 pt-1 pb-1 text-[9.5px] uppercase tracking-widest text-[var(--text-faint)]">Modalities</p>}
           {MODALITIES.map(mod => (
-            <button
+            <RailItem
               key={mod.id}
+              icon={<mod.icon className="w-3.5 h-3.5" />}
+              label={mod.label}
+              hint={mod.hint}
+              active={view === mod.id}
+              expanded={sidebarOpen}
               onClick={() => setView(mod.id as View)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                view === mod.id
-                  ? `${mod.bg} ${mod.color} border border-current/30`
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              <mod.icon className={`w-5 h-5 flex-shrink-0 ${mod.color}`} />
-              {sidebarOpen && <span>{mod.label}</span>}
-            </button>
+            />
           ))}
 
-          <button
-            onClick={() => setView('fusion')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-              view === 'fusion'
-                ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
-                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-            }`}
-          >
-            <BrainCircuit className="w-5 h-5 flex-shrink-0 text-purple-400" />
-            {sidebarOpen && <span>Fusion</span>}
-          </button>
-
-          <button
-            onClick={() => setView('report')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-              view === 'report'
-                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
-                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-            }`}
-          >
-            <FileText className="w-5 h-5 flex-shrink-0 text-blue-400" />
-            {sidebarOpen && <span>Report</span>}
-          </button>
-
-          <button
-            onClick={() => setView('models')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-              view === 'models'
-                ? 'bg-gray-700 text-gray-200 border border-gray-600'
-                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-            }`}
-          >
-            <Settings2 className="w-5 h-5 flex-shrink-0 text-gray-400" />
-            {sidebarOpen && <span>Models</span>}
-          </button>
+          {sidebarOpen && <p className="px-2 pt-3 pb-1 text-[9.5px] uppercase tracking-widest text-[var(--text-faint)]">Analysis</p>}
+          {OTHER_VIEWS.map(v => (
+            <RailItem
+              key={v.id}
+              icon={<v.icon className="w-3.5 h-3.5" />}
+              label={v.label}
+              active={view === v.id}
+              expanded={sidebarOpen}
+              onClick={() => setView(v.id)}
+            />
+          ))}
         </nav>
 
-        <div className="p-3 border-t border-gray-800">
-          <PatientContextPanel
-            context={patientContext}
-            onChange={setPatientContext}
-            compact={!sidebarOpen}
-          />
-        </div>
+        {sidebarOpen && (
+          <div className="p-3" style={{ borderTop: '1px solid var(--border-soft)' }}>
+            <PatientContextPanel
+              context={patientContext}
+              onChange={setPatientContext}
+              compact={!sidebarOpen}
+            />
+          </div>
+        )}
       </aside>
 
-      {/* Main Content */}
+      {/* Workspace */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 px-6 border-b border-gray-800 flex items-center justify-between bg-gray-900/50 backdrop-blur-sm">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-semibold text-white capitalize">{view}</h2>
+        <header className="h-10 px-3 flex items-center justify-between flex-shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--chrome)' }}>
+          <div className="flex items-center gap-3">
+            <h2 className="text-[12px] font-medium text-[var(--text)]">{VIEW_TITLES[view]}</h2>
             {isProcessing && (
-              <div className="flex items-center gap-2 text-emerald-400">
-                <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm">Processing...</span>
-              </div>
+              <span className="text-[10.5px] text-[var(--text-faint)] font-mono">working…</span>
             )}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span className={`w-2 h-2 rounded-full ${gpuInfo?.cuda_available ? 'bg-green-400' : 'bg-gray-500'}`} />
-              {gpuInfo?.cuda_available ? (
-                <>
-                  {gpuInfo?.gpu_name} · {Math.round(gpuInfo?.gpu_memory_total_mb || 0)} MB
-                </>
-              ) : (
-                'CPU Mode'
-              )}
+          <div className="flex items-center gap-2.5">
+            {gpuOn && (
+              <span className="text-[10px] font-mono text-[var(--text-faint)] hidden md:inline">
+                {gpuInfo?.gpu_name}
+              </span>
+            )}
+            <div className="seg" title={gpuOn ? `Accelerator: ${gpuInfo?.gpu_name ?? 'GPU'}` : 'Running on CPU'}>
+              <span className={`seg-item ${!gpuOn ? 'is-active' : ''}`}>cpu</span>
+              <span className={`seg-item ${gpuOn ? 'is-active' : ''}`}>gpu</span>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-4">
           {view === 'dashboard' && (
-            <DashboardView
+            <SessionView
               modalityResults={modalityResults}
               fusionResult={fusionResult}
               patientContext={patientContext}
               modelsLoaded={modelsLoaded}
               gpuInfo={gpuInfo}
               onQuickUpload={handleFileSelect}
+              onOpenView={setView}
             />
           )}
 
@@ -314,9 +313,8 @@ export function App() {
             <ModalityPanel
               modality="breath"
               icon={Mic2}
-              color="emerald"
               title="Breath Sound Analysis"
-              description="Upload a WAV/MP3/FLAC recording of breath sounds for classification"
+              description="Lung sound recording → normal, crackle or wheeze."
               result={modalityResults.breath}
               onRun={handleFileSelect}
               isProcessing={isProcessing}
@@ -327,9 +325,8 @@ export function App() {
             <ModalityPanel
               modality="cxr"
               icon={Image}
-              color="blue"
               title="Chest X-Ray Analysis"
-              description="Upload a DICOM/PNG/JPEG chest X-ray for pathology classification, segmentation, and measurements"
+              description="Radiograph → pathology classification, segmentation and measurements."
               result={modalityResults.cxr}
               onRun={handleFileSelect}
               isProcessing={isProcessing}
@@ -340,9 +337,8 @@ export function App() {
             <ModalityPanel
               modality="spirometry"
               icon={Activity}
-              color="amber"
               title="Spirometry Analysis"
-              description="Upload JSON or CSV spirometry data for pattern classification, GOLD staging, and trajectory prediction"
+              description="Flow-volume data → pattern classification, GOLD staging, trajectory."
               result={modalityResults.spirometry}
               onRun={handleFileSelect}
               isProcessing={isProcessing}
@@ -377,166 +373,168 @@ export function App() {
   )
 }
 
-function DashboardView({
+function RailItem({ icon, label, hint, active, expanded, onClick }: {
+  icon: React.ReactNode
+  label: string
+  hint?: string
+  active: boolean
+  expanded: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={expanded ? undefined : label}
+      className={`w-full flex items-center gap-2.5 px-2 py-[5px] rounded-[3px] text-[12px] transition-colors duration-100 text-left ${
+        active
+          ? 'bg-[var(--chrome-2)] text-white'
+          : 'text-[var(--text-muted)] hover:bg-[var(--chrome-2)] hover:text-[var(--text)]'
+      }`}
+      style={active ? { boxShadow: 'inset 2px 0 0 var(--accent)' } : undefined}
+    >
+      <span className={`flex-shrink-0 ${active ? 'text-[var(--text)]' : 'text-[var(--text-faint)]'}`}>{icon}</span>
+      {expanded && (
+        <>
+          <span className="truncate flex-1">{label}</span>
+          {hint && <span className="text-[9.5px] font-mono text-[var(--text-faint)]">{hint}</span>}
+        </>
+      )}
+    </button>
+  )
+}
+
+function SessionView({
   modalityResults,
   fusionResult,
   patientContext,
   modelsLoaded,
   gpuInfo,
   onQuickUpload,
+  onOpenView,
 }: {
   modalityResults: Record<string, ModalityResult>
   fusionResult: FusionResult | null
   patientContext: PatientContext
   modelsLoaded: Record<string, boolean>
-  gpuInfo: { cuda_available?: boolean } | null
+  gpuInfo: { device?: string; cuda_available?: boolean } | null
   onQuickUpload: (mod: string) => void
+  onOpenView: (v: View) => void
 }) {
   const completedCount = Object.values(modalityResults).filter(r => r.success).length
   const hasFusion = fusionResult?.success
+  const loadedCount = Object.values(modelsLoaded).filter(Boolean).length
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Patient Header */}
-      <div className="card-elevated">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold text-white">Patient Context</h3>
-            <p className="text-sm text-gray-400 mt-1">
-              {patientContext.patient_id ? `ID: ${patientContext.patient_id}` : 'No patient ID set'}
-              {patientContext.age && ` · Age: ${patientContext.age}`}
-              {patientContext.sex && ` · Sex: ${patientContext.sex}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">details editable in the sidebar</span>
+    <div className="max-w-4xl mx-auto space-y-3 animate-fade-in">
+      <div className="panel">
+        <div className="panel-header" style={{ background: 'var(--panel)' }}>
+          <span className="text-[12px] text-[var(--text)]">
+            {patientContext.patient_id || <span className="text-[var(--text-faint)]">no patient id set</span>}
+            {patientContext.age && <span className="text-[var(--text-faint)]"> · {patientContext.age} yr</span>}
+            {patientContext.sex && <span className="text-[var(--text-faint)]"> · {patientContext.sex}</span>}
+          </span>
+          <div className="flex items-center gap-2 font-mono text-[10.5px] text-[var(--text-faint)]">
+            <span>models {loadedCount}/{Object.keys(modelsLoaded).length}</span>
+            <span>·</span>
+            <span>{gpuInfo?.device ?? (gpuInfo?.cuda_available ? 'cuda' : 'cpu')}</span>
           </div>
         </div>
-      </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="Modalities Complete"
-          value={`${completedCount}/3`}
-          trend={completedCount > 0 ? 'up' : 'neutral'}
-          icon={<CheckCircle className="w-6 h-6 text-emerald-400" />}
-        />
-        <MetricCard
-          title="Fusion Status"
-          value={hasFusion ? 'Ready' : 'Pending'}
-          trend={hasFusion ? 'up' : 'neutral'}
-          icon={<BrainCircuit className="w-6 h-6 text-purple-400" />}
-        />
-        <MetricCard
-          title="Models Loaded"
-          value={`${Object.values(modelsLoaded).filter(Boolean).length}/${Object.keys(modelsLoaded).length}`}
-          trend="neutral"
-          icon={<Brain className="w-6 h-6 text-blue-400" />}
-        />
-        <MetricCard
-          title="GPU"
-          value={gpuInfo?.cuda_available ? 'Active' : 'CPU Only'}
-          trend={gpuInfo?.cuda_available ? 'up' : 'neutral'}
-          icon={<Zap className="w-6 h-6 text-amber-400" />}
-        />
-      </div>
-
-      {/* Modality Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {MODALITIES.map(mod => (
-          <QuickActionCard
-            key={mod.id}
-            modality={mod}
-            result={modalityResults[mod.id]}
-            onClick={() => onQuickUpload(mod.id)}
-          />
-        ))}
-      </div>
-
-      {/* Fusion Summary */}
-      {fusionResult && (
-        <FusionSummaryCard fusion={fusionResult} />
-      )}
-
-      {/* Recent Results */}
-      {completedCount > 0 && (
-        <RecentResultsPanel results={modalityResults} />
-      )}
-    </div>
-  )
-}
-
-function MetricCard({ title, value, trend, icon }: { title: string; value: string; trend: 'up' | 'down' | 'neutral'; icon: React.ReactNode }) {
-  return (
-    <div className="metric-card">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">{icon}</div>
+        {/* modality rows — the workbench table */}
         <div>
-          <p className="metric-label">{title}</p>
-          <p className="metric-value">{value}</p>
+          {MODALITIES.map((mod, i) => {
+            const r = modalityResults[mod.id]
+            return (
+              <div
+                key={mod.id}
+                className="table-row-hover flex items-center gap-3 px-3.5 py-2.5"
+                style={i > 0 ? { borderTop: '1px solid var(--border-soft)' } : undefined}
+              >
+                <mod.icon className="w-4 h-4 text-[var(--text-faint)] flex-shrink-0" />
+                <div className="w-36 flex-shrink-0">
+                  <p className="text-[12px]">{mod.label}</p>
+                  <p className="text-[9.5px] font-mono text-[var(--text-faint)]">{mod.hint}</p>
+                </div>
+                <div className="flex-1 min-w-0 text-[11px] text-[var(--text-muted)] truncate">
+                  {r?.error ? (
+                    <span className="text-[var(--bad)]">{r.error}</span>
+                  ) : r?.success ? (
+                    <ModalityPreview modality={mod.id} result={r} />
+                  ) : isRowPending(mod.id) ? null : (
+                    <span className="text-[var(--text-faint)]">—</span>
+                  )}
+                </div>
+                {r?.success && r?.inference_time_ms && (
+                  <span className="font-mono text-[10px] text-[var(--text-faint)]">{r.inference_time_ms.toFixed(0)} ms</span>
+                )}
+                {r?.success && <span className="badge badge-success flex-shrink-0">done</span>}
+                <button
+                  onClick={() => onQuickUpload(mod.id)}
+                  className="btn-secondary flex-shrink-0"
+                >
+                  {r?.success ? 're-run' : 'analyze'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* fusion row */}
+        <div className="flex items-center gap-3 px-3.5 py-2.5" style={{ borderTop: '1px solid var(--border-soft)' }}>
+          <Layers className="w-4 h-4 text-[var(--text-faint)] flex-shrink-0" />
+          <div className="w-36 flex-shrink-0">
+            <p className="text-[12px]">Fusion</p>
+            <p className="text-[9.5px] font-mono text-[var(--text-faint)]">≥2 modalities</p>
+          </div>
+          <div className="flex-1 min-w-0 text-[11px] text-[var(--text-muted)]">
+            {hasFusion ? (
+              <span>
+                {fusionResult.fused_results?.risk_level ?? '—'} risk ·{' '}
+                {Object.entries(fusionResult.modality_contributions || {})
+                  .map(([m, v]) => `${m.replace('_', ' ')} ${Math.round(v * 100)}%`)
+                  .join(' · ')}
+              </span>
+            ) : (
+              <span className="text-[var(--text-faint)]">
+                {completedCount >= 2 ? 'ready — open the fusion view' : `${completedCount}/2 modalities to enable`}
+              </span>
+            )}
+          </div>
+          {hasFusion && <span className="badge badge-info flex-shrink-0">fused</span>}
+          <button
+            onClick={() => onOpenView('fusion')}
+            className="btn-ghost flex-shrink-0"
+          >
+            open
+          </button>
         </div>
       </div>
-      <span className={`metric-trend ${trend === 'up' ? 'trend-up' : trend === 'down' ? 'trend-down' : 'trend-stable'}`}>
-        {trend === 'up' ? '✓' : trend === 'down' ? '✗' : '—'}
-      </span>
+
+      {hasFusion && fusionResult.explanation && (
+        <div className="panel">
+          <div className="panel-header">
+            <span className="panel-title">Fusion Assessment</span>
+            <span className={`badge ${
+              ['Very High', 'High'].includes(fusionResult.fused_results?.risk_level) ? 'badge-danger'
+              : fusionResult.fused_results?.risk_level === 'Moderate' ? 'badge-warning'
+              : 'badge-success'
+            }`}>{fusionResult.fused_results?.risk_level} risk</span>
+          </div>
+          <div className="p-3.5">
+            <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">{fusionResult.explanation}</p>
+          </div>
+        </div>
+      )}
+
+      <p className="text-[10.5px] text-[var(--text-faint)] px-1">
+        research tool — not a medical device. all inference runs locally.
+      </p>
     </div>
   )
 }
 
-function QuickActionCard({
-  modality,
-  result,
-  onClick,
-}: {
-  modality: (typeof MODALITIES)[number]
-  result?: ModalityResult
-  onClick: () => void
-}) {
-  const hasResult = result?.success
-  return (
-    <div className="panel group">
-      <div className="panel-header">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg ${modality.bg} flex items-center justify-center`}>
-            <modality.icon className={`w-5 h-5 ${modality.color}`} />
-          </div>
-          <div>
-            <p className="panel-title">{modality.label}</p>
-            <p className="text-xs text-gray-500">Click to upload</p>
-          </div>
-        </div>
-        {hasResult && (
-          <span className="badge badge-success">Done</span>
-        )}
-      </div>
-      <button
-        onClick={onClick}
-        className="w-full p-5 hover:bg-gray-900 transition-colors flex flex-col items-center justify-center gap-3"
-      >
-        <div className={`w-16 h-16 rounded-xl flex items-center justify-center ${modality.bg}`}>
-          <modality.icon className={`w-8 h-8 ${modality.color}`} />
-        </div>
-        {hasResult ? (
-          <>
-            <p className="text-sm font-medium text-white">Result ready</p>
-            <p className="text-xs text-gray-500">Click to re-run</p>
-          </>
-        ) : (
-          <>
-            <p className="text-sm font-medium text-gray-300">Upload file to analyze</p>
-            <p className="text-xs text-gray-500">Drag & drop or click</p>
-          </>
-        )}
-      </button>
-      {hasResult && result?.results && (
-        <div className="p-4 border-t border-gray-800 bg-gray-950/50">
-          <p className="text-xs text-gray-400 mb-2">Preview:</p>
-          <ModalityPreview modality={modality.id} result={result} />
-        </div>
-      )}
-    </div>
-  )
+function isRowPending(_modality: string): boolean {
+  return false
 }
 
 function ModalityPreview({ modality, result }: { modality: string; result: ModalityResult }) {
@@ -546,99 +544,35 @@ function ModalityPreview({ modality, result }: { modality: string; result: Modal
   switch (modality) {
     case 'breath':
       return (
-        <div className="flex items-center gap-3 text-sm">
-          <span className="badge badge-success">{r.prediction?.toUpperCase()}</span>
-          <span className="text-gray-400">{r.interpretation?.slice(0, 80)}...</span>
-        </div>
+        <span className="font-mono">
+          <span>{r.prediction}</span>
+          {r.probabilities?.[r.prediction] && (
+            <span className="text-[var(--text-faint)]"> {Math.round(r.probabilities[r.prediction] * 100)}%</span>
+          )}
+        </span>
       )
     case 'cxr':
       return (
-        <div className="flex items-center gap-3 text-sm">
-          {r.positive_findings?.slice(0, 3).map((f: string, i: number) => (
-            <span key={i} className="badge badge-warning">{f}</span>
-          ))}
+        <span>
+          {r.positive_findings?.length
+            ? `${r.positive_findings.length} finding${r.positive_findings.length > 1 ? 's' : ''}: ${r.positive_findings.join(', ')}`
+            : 'no positive findings'}
           {r.measurements?.cardiothoracic_ratio && (
-            <span className="text-gray-400">CTR: {r.measurements.cardiothoracic_ratio.toFixed(2)}</span>
+            <span className="font-mono text-[var(--text-faint)]"> · ctr {r.measurements.cardiothoracic_ratio.toFixed(2)}</span>
           )}
-        </div>
+        </span>
       )
     case 'spirometry':
       return (
-        <div className="flex items-center gap-3 text-sm">
-          <span className={`badge ${r.pattern === 'Normal' ? 'badge-success' : 'badge-warning'}`}>{r.pattern}</span>
-          {r.gold_stage && <span className="badge badge-info">{r.gold_stage}</span>}
-          <span className="text-gray-400">FEV1/FVC: {r.fev1_fvc_ratio?.toFixed(2)}</span>
-        </div>
+        <span>
+          {r.pattern}
+          {r.gold_stage && <span className="font-mono text-[var(--text-faint)]"> · {r.gold_stage}</span>}
+          <span className="font-mono text-[var(--text-faint)]"> · fev1/fvc {r.fev1_fvc_ratio?.toFixed(2)}</span>
+        </span>
       )
     default:
       return null
   }
 }
 
-function FusionSummaryCard({ fusion }: { fusion: FusionResult }) {
-  const risk = fusion.fused_results?.risk_level || 'Unknown'
-  const riskColors: Record<string, string> = {
-    'Very High': 'text-red-400 bg-red-500/10 border-red-500/30',
-    'High': 'text-red-400 bg-red-500/10 border-red-500/30',
-    'Moderate': 'text-amber-400 bg-amber-500/10 border-amber-500/30',
-    'Low': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
-    'Very Low': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
-  }
-
-  return (
-    <div className={`panel border-${riskColors[risk]?.split(' ')[2] || 'gray-700'}`}>
-      <div className="panel-header">
-        <div className="flex items-center gap-3">
-          <BrainCircuit className="w-5 h-5 text-purple-400" />
-          <h3 className="panel-title">Multimodal Fusion Assessment</h3>
-        </div>
-        <span className={`badge ${riskColors[risk] ? 'bg-emerald-500/20 text-emerald-400' : 'badge-neutral'}`}>
-          {risk} Risk
-        </span>
-      </div>
-      <div className="p-5">
-        <p className="text-gray-300 mb-4">{fusion.explanation}</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Object.entries(fusion.modality_contributions || {}).map(([mod, val]) => (
-            <div key={mod} className="text-center">
-              <p className="text-2xl font-bold text-white">{Math.round(val * 100)}%</p>
-              <p className="text-xs text-gray-500 capitalize">{mod.replace('_', ' ')}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function RecentResultsPanel({ results }: { results: Record<string, ModalityResult> }) {
-  const recent = Object.entries(results)
-    .filter(([_, r]) => r.success)
-    .slice(-3)
-
-  return (
-    <div className="panel">
-      <div className="panel-header">
-        <h3 className="panel-title">Recent Results</h3>
-      </div>
-      <div className="divide-y divide-gray-800">
-        {recent.map(([mod, r]) => (
-          <div key={mod} className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                {mod === 'breath' && <Mic2 className="w-4 h-4 text-emerald-400" />}
-                {mod === 'cxr' && <Image className="w-4 h-4 text-blue-400" />}
-                {mod === 'spirometry' && <Activity className="w-4 h-4 text-amber-400" />}
-              </div>
-              <div>
-                <p className="font-medium text-white capitalize">{mod}</p>
-                <p className="text-xs text-gray-500">{r.inference_time_ms?.toFixed(0)}ms</p>
-              </div>
-            </div>
-            <ModalityPreview modality={mod} result={r} />
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+export { isRowPending }

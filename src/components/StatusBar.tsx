@@ -1,4 +1,3 @@
-import { Activity, CircleDot } from 'lucide-react'
 import type { HealthInfo } from '../lib/types'
 
 interface StatusBarProps {
@@ -12,21 +11,17 @@ export function StatusBar({ gpuInfo, modelsLoaded }: StatusBarProps) {
   const backendUp = gpuInfo !== null
 
   return (
-    <footer className="h-8 px-6 border-t border-gray-800 flex items-center justify-between text-xs text-gray-500 bg-gray-950">
-      <div className="flex items-center gap-4">
+    <footer className="h-6 px-3 flex items-center justify-between text-[10px] font-mono gap-4" style={{ borderTop: '1px solid var(--border)', background: 'var(--chrome)', color: 'var(--text-faint)' }}>
+      <div className="flex items-center gap-3">
         <span className="flex items-center gap-1.5">
-          <CircleDot className={`w-2.5 h-2.5 ${backendUp ? 'text-green-400' : 'text-red-400'}`} />
-          Sidecar {backendUp ? 'connected' : 'starting…'}
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: backendUp ? 'var(--good)' : 'var(--warn)' }} />
+          sidecar {backendUp ? 'connected' : 'starting…'}
         </span>
-        <span className="flex items-center gap-1.5">
-          <Activity className="w-3 h-3" />
-          Models {loaded}/{total}
-        </span>
+        <span>models {loaded}/{total}</span>
       </div>
-      <div className="flex items-center gap-4">
-        <span>{gpuInfo?.cuda_available ? `${gpuInfo.gpu_name ?? 'CUDA'} · ${Math.round(gpuInfo.gpu_memory_total_mb ?? 0)} MB` : 'CPU mode'}</span>
-        <span className="text-gray-700">|</span>
-        <span>research tool — not a medical device</span>
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="truncate">{gpuInfo?.cuda_available ? `${gpuInfo.gpu_name ?? 'GPU'} · ${Math.round(gpuInfo.gpu_memory_total_mb ?? 0)} MB` : 'cpu'}</span>
+        <span className="hidden sm:inline">research use only</span>
       </div>
     </footer>
   )
