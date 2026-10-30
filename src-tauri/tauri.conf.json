@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Respiratory AI Workstation",
+  "productName": "StethOS",
   "version": "0.1.0",
   "identifier": "com.rajdeep.respiratory-ai-workstation",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Respiratory AI Workstation",
+        "title": "StethOS",
         "width": 1400,
         "height": 900,
         "minWidth": 1200,

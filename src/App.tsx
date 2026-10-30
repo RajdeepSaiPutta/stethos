@@ -184,8 +184,8 @@ export function App() {
                 <Stethoscope className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
-                <h1 className="font-bold text-white text-lg">Respiratory AI</h1>
-                <p className="text-xs text-gray-500">Workstation v0.1</p>
+                <h1 className="font-bold text-white text-lg">StethOS</h1>
+                <p className="text-xs text-gray-500">Respiratory AI Workstation</p>
               </div>
             </div>
           )}
