@@ -409,7 +409,7 @@ function DashboardView({
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <PatientContextPanel context={patientContext} onChange={() => {}} compact={false} />
+            <span className="text-sm text-gray-500">details editable in the sidebar</span>
           </div>
         </div>
       </div>
