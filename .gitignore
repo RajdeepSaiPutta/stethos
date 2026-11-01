@@ -9,3 +9,10 @@ python/build/
 .DS_Store
 *.log
 src-tauri/gen/
+
+# heavy artifacts — regenerable or bundled
+data/
+python/dist/
+python/data/
+python/models_test/
+src-tauri/binaries/

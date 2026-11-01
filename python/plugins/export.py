@@ -35,7 +35,7 @@ def _export_json(data: Dict[str, Any], output_path: Path) -> str:
         "report_metadata": {
             "generated_at": datetime.utcnow().isoformat() + "Z",
             "version": "1.0",
-            "generator": "Respiratory AI Workstation"
+            "generator": "Stethos"
         },
         "clinical_data": data
     }
@@ -96,7 +96,7 @@ def _export_pdf(data: Dict[str, Any], output_path: Path) -> str:
     story = []
 
     # Header
-    story.append(Paragraph("Respiratory AI Workstation — Clinical Report", styles['ClinicalTitle']))
+    story.append(Paragraph("Stethos — Clinical Report", styles['ClinicalTitle']))
     story.append(Paragraph(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", styles['ClinicalBody']))
     story.append(Spacer(1, 12))
 
@@ -270,7 +270,7 @@ def _export_fhir(data: Dict[str, Any], output_path: Path) -> str:
         type=CodeableConcept(coding=[Coding(system="http://loinc.org", code="11502-2", display="Clinical Report")]),
         subject=Reference(reference=f"Patient/{patient.id}"),
         date=datetime.utcnow(),
-        title="Respiratory AI Workstation Multimodal Assessment",
+        title="Stethos Multimodal Assessment",
         author=[Reference(reference=f"Patient/{patient.id}")]
     )
     bundle.entry.append(Bundle.Entry(resource=composition, fullUrl="Composition/report"))
@@ -412,7 +412,7 @@ def _export_dicom_sr(data: Dict[str, Any], output_path: Path) -> str:
     ds.ContentDate = datetime.utcnow().strftime("%Y%m%d")
     ds.ContentTime = datetime.utcnow().strftime("%H%M%S")
     ds.Modality = "SR"
-    ds.SeriesDescription = "Respiratory AI Workstation Multimodal Report"
+    ds.SeriesDescription = "Stethos Multimodal Report"
 
     # Content sequence (simplified)
     content_seq = Sequence()

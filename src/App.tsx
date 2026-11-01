@@ -240,7 +240,7 @@ export function App() {
               <Stethoscope className="w-3.5 h-3.5 text-[var(--accent)] flex-shrink-0" strokeWidth={2.2} />
               <div className="min-w-0">
                 <div className="text-[13px] font-semibold leading-tight">Stethos</div>
-                <div className="text-[8.5px] uppercase tracking-[0.14em] text-[var(--text-faint)] leading-tight truncate">Respiratory ML Workstation</div>
+                <div className="text-[8.5px] uppercase tracking-[0.14em] text-[var(--text-faint)] leading-tight truncate">Local ML Diagnostics</div>
               </div>
             </div>
           ) : (

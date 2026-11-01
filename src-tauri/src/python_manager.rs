@@ -126,7 +126,7 @@ impl PythonManager {
     pub async fn health_check() -> Result<serde_json::Value> {
         let client = reqwest::Client::new();
         let resp = client
-            .get(format!("http://localhost:{}/health", PYTHON_PORT))
+            .get(format!("http://127.0.0.1:{}/health", PYTHON_PORT))
             .timeout(std::time::Duration::from_secs(5))
             .send()
             .await?;
@@ -141,7 +141,7 @@ impl PythonManager {
     ) -> Result<serde_json::Value> {
         let client = reqwest::Client::new();
         let resp = client
-            .post(format!("http://localhost:{}/inference", PYTHON_PORT))
+            .post(format!("http://127.0.0.1:{}/inference", PYTHON_PORT))
             .json(&serde_json::json!({
                 "modality": modality,
                 "input_path": input_path,
@@ -157,7 +157,7 @@ impl PythonManager {
     pub async fn run_fusion_inference(inputs: serde_json::Value) -> Result<serde_json::Value> {
         let client = reqwest::Client::new();
         let resp = client
-            .post(format!("http://localhost:{}/fusion", PYTHON_PORT))
+            .post(format!("http://127.0.0.1:{}/fusion", PYTHON_PORT))
             .json(&inputs)
             .timeout(std::time::Duration::from_secs(180))
             .send()
@@ -173,7 +173,7 @@ impl PythonManager {
     ) -> Result<String> {
         let client = reqwest::Client::new();
         let resp = client
-            .post(format!("http://localhost:{}/export", PYTHON_PORT))
+            .post(format!("http://127.0.0.1:{}/export", PYTHON_PORT))
             .json(&serde_json::json!({
                 "format": format,
                 "data": data,
@@ -189,7 +189,7 @@ impl PythonManager {
     pub async fn list_models() -> Result<serde_json::Value> {
         let client = reqwest::Client::new();
         let resp = client
-            .get(format!("http://localhost:{}/models", PYTHON_PORT))
+            .get(format!("http://127.0.0.1:{}/models", PYTHON_PORT))
             .timeout(std::time::Duration::from_secs(10))
             .send()
             .await?;
@@ -200,7 +200,7 @@ impl PythonManager {
     pub async fn set_device(device: String) -> Result<serde_json::Value> {
         let client = reqwest::Client::new();
         let resp = client
-            .post(format!("http://localhost:{}/device", PYTHON_PORT))
+            .post(format!("http://127.0.0.1:{}/device", PYTHON_PORT))
             .json(&serde_json::json!({ "device": device }))
             .timeout(std::time::Duration::from_secs(120))
             .send()
@@ -212,7 +212,7 @@ impl PythonManager {
     pub async fn download_model(model_name: String) -> Result<String> {
         let client = reqwest::Client::new();
         let resp = client
-            .post(format!("http://localhost:{}/models/download", PYTHON_PORT))
+            .post(format!("http://127.0.0.1:{}/models/download", PYTHON_PORT))
             .json(&serde_json::json!({ "model": model_name }))
             .timeout(std::time::Duration::from_secs(600))
             .send()

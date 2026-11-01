@@ -60,7 +60,7 @@ class MedSAMSegmenter(nn.Module):
         # Encoder (MobileNetV3-Small for efficiency); imagenet weights only on opt-in (offline by default)
         import os
         from torchvision.models import mobilenet_v3_small, MobileNet_V3_Small_Weights
-        download = os.environ.get("RESPIRATORY_AI_PRETRAINED") == "1"
+        download = os.environ.get("STETHOS_PRETRAINED") == "1"
         weights = MobileNet_V3_Small_Weights.IMAGENET1K_V1 if download else None
         backbone = mobilenet_v3_small(weights=weights)
         self.encoder = backbone.features
@@ -80,6 +80,10 @@ class MedSAMSegmenter(nn.Module):
             nn.ReLU(inplace=True),
             nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
             nn.Conv2d(64, 32, 3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
+            nn.Conv2d(32, 32, 3, padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
             nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
@@ -123,7 +127,7 @@ class CXRPlugin(ModalityPlugin):
     def load_model(self, device: torch.device) -> None:
         self._device = device
         # only pull imagenet weights when explicitly opted in; offline first
-        download = os.environ.get("RESPIRATORY_AI_PRETRAINED") == "1"
+        download = os.environ.get("STETHOS_PRETRAINED") == "1"
         self._classifier = CXRClassifier(num_classes=len(CHEXNET_PATHOLOGIES), pretrained=download).to(device)
         self._segmenter = MedSAMSegmenter(num_classes=len(LUNG_CLASSES)).to(device)
         self._classifier.eval()
@@ -144,7 +148,7 @@ class CXRPlugin(ModalityPlugin):
         if not self._classifier_path or not Path(self._classifier_path).exists():
             logger.warning(
                 "No CXR classifier checkpoint found; classifier uses "
-                + ("ImageNet weights" if os.environ.get("RESPIRATORY_AI_PRETRAINED") == "1" else "random weights (offline mode)")
+                + ("ImageNet weights" if os.environ.get("STETHOS_PRETRAINED") == "1" else "random weights (offline mode)")
             )
 
         # store just a flag; preprocessing does the math inline (torch.nn.Lambda was removed from torch)

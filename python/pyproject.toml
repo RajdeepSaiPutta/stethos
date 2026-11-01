@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "respiratory-ai-workstation"
+name = "stethos"
 version = "0.1.0"
-description = "Local multimodal respiratory diagnostics workstation"
+description = "Stethos — local multimodal respiratory diagnostics workstation"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []

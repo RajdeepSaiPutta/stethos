@@ -85,8 +85,8 @@ class SpirometryPlugin(ModalityPlugin):
             checkpoint = torch.load(self._model_path, map_location=device)
             state_dict = checkpoint.get("model_state_dict", checkpoint.get("model", checkpoint))
             self._model.load_state_dict(state_dict)
-            self._scaler_mean = checkpoint.get("scaler_mean")
-            self._scaler_std = checkpoint.get("scaler_std")
+            self._scaler_mean = np.array(checkpoint.get("scaler_mean", []), dtype=np.float32)
+            self._scaler_std = np.array(checkpoint.get("scaler_std", []), dtype=np.float32)
             logger.info(f"Loaded spirometry model from {self._model_path}")
         else:
             logger.warning("No spirometry model checkpoint found")

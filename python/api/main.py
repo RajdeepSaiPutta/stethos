@@ -296,4 +296,4 @@ async def download_model(request: ModelDownloadRequest):
         raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8765, log_level="info")
+    uvicorn.run(app, host="127.0.0.1", port=8765, log_level="info")
