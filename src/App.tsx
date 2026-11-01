@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, Event } from '@tauri-apps/api/event'
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog'
@@ -88,6 +88,10 @@ export function App() {
   const [modelsLoaded, setModelsLoaded] = useState<Record<string, boolean>>({})
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [backendNote, setBackendNote] = useState<string | null>(null)
+  // always-current mirror of modalityResults for callbacks that fire long
+  // after their render (slow inference resolving over a newer run otherwise
+  // clobbers the other modality's result)
+  const modalityResultsRef = useRef<Record<string, ModalityResult>>({})
 
   // returns true when the sidecar bridge is healthy. with recover=true a failed
   // probe triggers an actual restart: SidecarManager adopts an already-healthy
@@ -125,6 +129,16 @@ export function App() {
       models.plugins.forEach((p) => { loaded[p.name] = p.loaded })
       setModelsLoaded(loaded)
       setBackendNote(null)
+
+      // sticky device mode: a sidecar restart/reset drops its device override,
+      // re-pin gpu whenever the sidecar reports cpu while the user chose gpu
+      const pinned = localStorage.getItem('stethos.device')
+      if (pinned === 'gpu' && health.device === 'cpu' && health.cuda_available) {
+        try {
+          const h2 = await invoke('set_device', { device: 'auto' })
+          setGpuInfo(h2)
+        } catch (e) { console.warn('device re-pin failed (retries next poll):', e) }
+      }
       return true
     } catch (e) {
       console.error('Health check failed:', e)
@@ -158,6 +172,7 @@ export function App() {
     if (!inside || deviceBusy) return
     setDeviceBusy(true)
     try {
+      localStorage.setItem('stethos.device', want) // survives app restarts
       const health = await invoke('set_device', { device: want === 'gpu' ? 'auto' : 'cpu' })
       setGpuInfo(health)
     } catch (e) {
@@ -186,8 +201,13 @@ export function App() {
         options,
         patient_id: patientContext.patient_id || undefined,
       })
-      const newer = { ...modalityResults, [modality]: result }
-      setModalityResults(newer)
+      // functional update: never writes from a stale snapshot, so a slow run
+      // finishing late can't wipe another modality's result
+      setModalityResults(prev => {
+        const next = { ...prev, [modality]: result }
+        modalityResultsRef.current = next
+        return next
+      })
 
       // record the run in the local history timeline
       if (result?.success) {
@@ -211,6 +231,7 @@ export function App() {
       }
 
       // Auto-run fusion once two modalities have results
+      const newer = modalityResultsRef.current
       const successes = Object.values(newer).filter(r => r?.success).length
       if (successes >= 2) {
         await runFusion(modality, result)
@@ -225,9 +246,10 @@ export function App() {
   }
 
   const runFusion = async (newModality?: string, newResult?: ModalityResult) => {
+    // read from the always-current ref, not a possibly-stale closure
     const merged = newModality && newResult
-      ? { ...modalityResults, [newModality]: newResult }
-      : modalityResults
+      ? { ...modalityResultsRef.current, [newModality]: newResult }
+      : modalityResultsRef.current
     const successfulModalities = Object.entries(merged)
       .filter(([, r]) => r?.success)
       .reduce<Record<string, ModalityResult>>((acc, [k, v]) => ({ ...acc, [k]: v as ModalityResult }), {})
@@ -265,7 +287,13 @@ export function App() {
     }
   }
 
-  const handleFileSelect = async (modality: string) => {
+  const handleFileSelect = async (modality: string, filePath?: string) => {
+    // dropped files arrive with an absolute path (tauri injects it) — skip the
+    // dialog and run directly on them
+    if (filePath) {
+      await runModalityInference(modality, filePath)
+      return
+    }
     const filters = {
       breath: [{ name: 'Audio', extensions: ['wav', 'mp3', 'flac'] }],
       cxr: [{ name: 'Images', extensions: ['dcm', 'dicom', 'png', 'jpg', 'jpeg'] }],

@@ -9,7 +9,7 @@ interface ModalityPanelProps {
   title: string
   description: string
   result?: any
-  onRun: (modality: string) => void
+  onRun: (modality: string, filePath?: string) => void
   isProcessing: boolean
 }
 
@@ -47,7 +47,10 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
       return
     }
     setPreviewUrl(URL.createObjectURL(file))
-    onRun(modality)
+    // dropped files carry an absolute path (injected by the webview) — run the
+    // inference directly on it; without a path fall back to the dialog
+    const path = (file as any).path
+    onRun(modality, path || undefined)
   }
 
   const formatTime = (ms: number) => `${ms.toFixed(0)} ms`
