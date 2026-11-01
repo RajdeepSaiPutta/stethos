@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { Upload, Loader2, Download } from 'lucide-react'
+import { ConfidenceBadge } from './ConfidenceBadge'
 
 interface ModalityPanelProps {
   modality: string
@@ -63,6 +64,7 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
             <div className="flex items-baseline gap-3">
               <span className="mono text-sm text-white">{r.prediction}</span>
               <span className="badge">{formatTime(result.inference_time_ms || 0)}</span>
+              <ConfidenceBadge modality={modality} result={result} />
             </div>
             <div className="space-y-2.5">
               {Object.entries(r.probabilities || {}).map(([cls, prob]) => (
@@ -87,6 +89,7 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
             <div className="flex items-baseline gap-3">
               <span className="mono text-sm text-white">{r.positive_findings?.length ? `${r.positive_findings.length} findings` : 'no positive findings'}</span>
               <span className="badge">{formatTime(result.inference_time_ms || 0)}</span>
+              <ConfidenceBadge modality={modality} result={result} />
             </div>
             {r.positive_findings?.length && (
               <div className="flex flex-wrap gap-1.5">
@@ -123,6 +126,7 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
               <span className="mono text-sm text-white">{r.pattern}</span>
               {r.gold_stage && <span className="badge">{r.gold_stage}</span>}
               <span className="badge">{formatTime(result.inference_time_ms || 0)}</span>
+              <ConfidenceBadge modality={modality} result={result} />
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-px" style={{ background: 'var(--border-soft)', border: '1px solid var(--border-soft)' }}>
               {Object.entries(r.predicted_values || {}).map(([k, v]) => (

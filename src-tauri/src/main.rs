@@ -17,6 +17,17 @@ async fn stop_sidecar() -> Result<String, String> {
 
 #[command]
 async fn sidecar_health_check() -> Result<serde_json::Value, String> {
+    health_impl().await
+}
+
+// the frontend consistently invokes this name; keep it as an alias of
+// sidecar_health_check so the two layers can't drift apart silently again
+#[command]
+async fn python_health_check() -> Result<serde_json::Value, String> {
+    health_impl().await
+}
+
+async fn health_impl() -> Result<serde_json::Value, String> {
     let client = reqwest::Client::new();
     let resp = client
         .get("http://127.0.0.1:8765/health")
@@ -151,10 +162,21 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        // page-load logging at error level so it passes any RUST_LOG filter —
+        // this is how we diagnose webview blankness/error pages for good
+        .on_page_load(|webview, payload| {
+            tracing::error!(
+                "page load: url={} event={:?}",
+                payload.url(),
+                payload.event()
+            );
+            let _ = webview;
+        })
         .invoke_handler(tauri::generate_handler![
             start_sidecar,
             stop_sidecar,
             sidecar_health_check,
+            python_health_check,
             run_inference,
             run_fusion_inference,
             export_report,

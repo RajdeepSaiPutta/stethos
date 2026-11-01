@@ -19,3 +19,9 @@ anyhow = "1.0"
 thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+[features]
+# REQUIRED for a standalone release binary: embeds the built frontend
+# (frontendDist) and serves it through the tauri protocol. without this
+# feature the release app loads devUrl (localhost:1420) and dies with
+# "could not connect: connection refused" whenever vite isn't running.
+custom-protocol = ["tauri/custom-protocol"]

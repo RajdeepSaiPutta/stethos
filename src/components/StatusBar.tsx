@@ -3,9 +3,10 @@ import type { HealthInfo } from '../lib/types'
 interface StatusBarProps {
   gpuInfo: HealthInfo | null
   modelsLoaded: Record<string, boolean>
+  note?: string | null
 }
 
-export function StatusBar({ gpuInfo, modelsLoaded }: StatusBarProps) {
+export function StatusBar({ gpuInfo, modelsLoaded, note }: StatusBarProps) {
   const total = Object.keys(modelsLoaded).length
   const loaded = Object.values(modelsLoaded).filter(Boolean).length
   const backendUp = gpuInfo !== null
@@ -15,7 +16,7 @@ export function StatusBar({ gpuInfo, modelsLoaded }: StatusBarProps) {
       <div className="flex items-center gap-3">
         <span className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: backendUp ? 'var(--good)' : 'var(--warn)' }} />
-          sidecar {backendUp ? 'connected' : 'starting…'}
+          sidecar {backendUp ? 'connected' : note === 'unreachable' ? 'unreachable — retrying' : 'starting…'}
         </span>
         <span>models {loaded}/{total}</span>
       </div>

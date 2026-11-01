@@ -4,7 +4,7 @@ import { listen, Event } from '@tauri-apps/api/event'
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog'
 import {
   Mic2, Image, Activity, FileText, Stethoscope,
-  Layers, Settings2, PanelLeftOpen, PanelLeftClose,
+  Layers, Settings2, PanelLeftOpen, PanelLeftClose, History,
 } from 'lucide-react'
 import { ModalityPanel } from './components/ModalityPanel'
 import { FusionPanel } from './components/FusionPanel'
@@ -12,6 +12,9 @@ import { PatientContextPanel } from './components/PatientContextPanel'
 import { ReportPanel } from './components/ReportPanel'
 import { ModelManager } from './components/ModelManager'
 import { StatusBar } from './components/StatusBar'
+import { HistoryPanel } from './components/HistoryPanel'
+import { addStudy, basename, summarizeResult } from './lib/studies'
+import { extractProbabilities } from './lib/confidence'
 
 interface ModalityResult {
   modality: string
@@ -43,7 +46,7 @@ interface PatientContext {
   comorbidities?: string[]
 }
 
-type View = 'dashboard' | 'breath' | 'cxr' | 'spirometry' | 'fusion' | 'report' | 'models'
+type View = 'dashboard' | 'breath' | 'cxr' | 'spirometry' | 'fusion' | 'history' | 'report' | 'models'
 
 const VIEW_TITLES: Record<View, string> = {
   dashboard: 'Session',
@@ -51,6 +54,7 @@ const VIEW_TITLES: Record<View, string> = {
   cxr: 'Chest X-Ray',
   spirometry: 'Spirometry',
   fusion: 'Fusion',
+  history: 'History & Compare',
   report: 'Report',
   models: 'Models',
 }
@@ -64,6 +68,7 @@ const MODALITIES = [
 // every view except the three modality workspaces
 const OTHER_VIEWS: { id: View; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'fusion', label: 'Fusion', icon: Layers },
+  { id: 'history', label: 'History', icon: History },
   { id: 'report', label: 'Report', icon: FileText },
   { id: 'models', label: 'Models', icon: Settings2 },
 ]
@@ -82,8 +87,12 @@ export function App() {
   const [deviceBusy, setDeviceBusy] = useState(false)
   const [modelsLoaded, setModelsLoaded] = useState<Record<string, boolean>>({})
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [backendNote, setBackendNote] = useState<string | null>(null)
 
-  const checkHealth = useCallback(async () => {
+  // returns true when the sidecar bridge is healthy. with recover=true a failed
+  // probe triggers an actual restart: SidecarManager adopts an already-healthy
+  // sidecar or spawns a fresh one, so a killed/crashed backend self-heals.
+  const checkHealth = useCallback(async (recover = false): Promise<boolean> => {
     try {
       const insideTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
       if (!insideTauri) {
@@ -99,23 +108,45 @@ export function App() {
           gpu_memory_total_mb: 11843,
         })
         setModelsLoaded({ breath: true, cxr: true, spirometry: true, fusion: true })
-        return
+        return true
       }
-      const health = await invoke('python_health_check')
+      let health: any
+      try {
+        health = await invoke('python_health_check')
+      } catch (probeErr) {
+        if (!recover) throw probeErr
+        console.warn('sidecar probe failed, attempting restart:', probeErr)
+        await invoke('start_sidecar')
+        health = await invoke('python_health_check')
+      }
       setGpuInfo(health)
       const models = (await invoke('list_models')) as { plugins: { name: string; loaded: boolean }[] }
       const loaded: Record<string, boolean> = {}
       models.plugins.forEach((p) => { loaded[p.name] = p.loaded })
       setModelsLoaded(loaded)
+      setBackendNote(null)
+      return true
     } catch (e) {
       console.error('Health check failed:', e)
+      return false
     }
   }, [])
 
   useEffect(() => {
-    checkHealth()
-    const interval = setInterval(checkHealth, 30000)
-    return () => clearInterval(interval)
+    let cancelled = false
+    const boot = async () => {
+      // first-run: the sidecar spawns and loads weights, which can take a
+      // while. retry instead of leaving the ui in a dead-end state.
+      for (let i = 0; i < 8 && !cancelled; i++) {
+        if (await checkHealth(true)) return
+        await new Promise((r) => setTimeout(r, 2000))
+      }
+      if (!cancelled) setBackendNote('unreachable')
+    }
+    boot()
+    // keep-healing: if the sidecar dies later, the next poll restarts it
+    const interval = setInterval(() => { checkHealth(true) }, 30000)
+    return () => { cancelled = true; clearInterval(interval) }
   }, [checkHealth])
 
   // the cpu|gpu segmented control is a real switch: it pins the sidecar to
@@ -157,6 +188,28 @@ export function App() {
       })
       const newer = { ...modalityResults, [modality]: result }
       setModalityResults(newer)
+
+      // record the run in the local history timeline
+      if (result?.success) {
+        try {
+          addStudy({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            at: Date.now(),
+            modality: modality as any,
+            patient_id: patientContext.patient_id || 'unassigned',
+            file_name: basename(filePath),
+            ok: true,
+            summary: summarizeResult(modality, result),
+            probabilities: ((): Record<string, number> | undefined => {
+              const p = extractProbabilities(modality, result.results)
+              return p ?? undefined
+            })(),
+            detail: result.results,
+            duration_ms: result.inference_time_ms,
+          })
+        } catch (e) { console.error('history record failed', e) }
+      }
+
       // Auto-run fusion once two modalities have results
       const successes = Object.values(newer).filter(r => r?.success).length
       if (successes >= 2) {
@@ -189,6 +242,22 @@ export function App() {
         fusion_options: {}
       })
       setFusionResult(result)
+
+      // fusion runs are timeline entries too
+      if (result?.success) {
+        try {
+          addStudy({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            at: Date.now(),
+            modality: 'fusion',
+            patient_id: patientContext.patient_id || 'unassigned',
+            ok: true,
+            summary: summarizeResult('fusion', result),
+            detail: { ...(result.fused_results || {}), explanation: result.explanation },
+            duration_ms: undefined,
+          })
+        } catch (e) { console.error('history record failed', e) }
+      }
     } catch (e) {
       console.error('Fusion failed:', e)
     } finally {
@@ -391,6 +460,10 @@ export function App() {
             />
           )}
 
+          {view === 'history' && (
+            <HistoryPanel patientId={patientContext.patient_id} />
+          )}
+
           {view === 'report' && (
             <ReportPanel
               patientContext={patientContext}
@@ -403,7 +476,7 @@ export function App() {
           {view === 'models' && <ModelManager />}
         </div>
 
-        <StatusBar gpuInfo={gpuInfo} modelsLoaded={modelsLoaded} />
+        <StatusBar gpuInfo={gpuInfo} modelsLoaded={modelsLoaded} note={backendNote} />
       </main>
     </div>
   )
