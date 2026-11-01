@@ -75,13 +75,67 @@ const OTHER_VIEWS: { id: View; label: string; icon: React.ComponentType<{ classN
 
 export function App() {
   const [view, setView] = useState<View>('dashboard')
+  // session results survive even if the app shell resets its ui state (or the
+  // webview reloads): stored locally, rehydrated on mount, cleared when the
+  // patient id changes. nothing here touches the network.
   const [patientContext, setPatientContext] = useState<PatientContext>({
     patient_id: '',
     age: undefined,
     sex: '',
   })
-  const [modalityResults, setModalityResults] = useState<Record<string, ModalityResult>>({})
-  const [fusionResult, setFusionResult] = useState<FusionResult | null>(null)
+  const [modalityResults, setModalityResults] = useState<Record<string, ModalityResult>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('stethos.session') || '{}').results || {}
+    } catch { return {} }
+  })
+  const [fusionResult, setFusionResult] = useState<FusionResult | null>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('stethos.session') || '{}').fusion || null
+    } catch { return null }
+  })
+
+  // persist the session bundle on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem('stethos.session', JSON.stringify({
+        at: Date.now(),
+        results: modalityResults,
+        fusion: fusionResult,
+      }))
+    } catch { /* storage full — session persistence is best-effort */ }
+  }, [modalityResults, fusionResult])
+
+  // a fresh session per patient: switching patients clears stale results
+  useEffect(() => {
+    const prev = localStorage.getItem('stethos.session.patient')
+    if (patientContext.patient_id && prev && prev !== patientContext.patient_id) {
+      setModalityResults({})
+      setFusionResult(null)
+    }
+    localStorage.setItem('stethos.session.patient', patientContext.patient_id || '')
+  }, [patientContext.patient_id])
+
+  // capture every js error into a local diagnostics ring so crashes that
+  // reset ui state leave a trace we can inspect
+  useEffect(() => {
+    const record = (msg: string, stack: string) => {
+      try {
+        const list: any[] = JSON.parse(localStorage.getItem('stethos.errors') || '[]')
+        list.push({ at: Date.now(), msg, stack: stack.slice(0, 400) })
+        localStorage.setItem('stethos.errors', JSON.stringify(list.slice(-20)))
+      } catch { /* ignore */ }
+      // eslint-disable-next-line no-console
+      console.error('[stethos diagnostics]', msg)
+    }
+    const onErr = (e: ErrorEvent) => record(e.message || 'error', ((e as any).error?.stack as string) || '')
+    const onRej = (e: PromiseRejectionEvent) => record('unhandled rejection: ' + String(e.reason).slice(0, 300), '')
+    window.addEventListener('error', onErr)
+    window.addEventListener('unhandledrejection', onRej)
+    return () => {
+      window.removeEventListener('error', onErr)
+      window.removeEventListener('unhandledrejection', onRej)
+    }
+  }, [])
   const [isProcessing, setIsProcessing] = useState(false)
   const [gpuInfo, setGpuInfo] = useState<any>(null)
   const [deviceBusy, setDeviceBusy] = useState(false)
