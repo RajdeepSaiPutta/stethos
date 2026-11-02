@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { Upload, Loader2, Download } from 'lucide-react'
 import { ConfidenceBadge } from './ConfidenceBadge'
 
@@ -17,7 +17,6 @@ interface ModalityPanelProps {
 export function ModalityPanel({ modality, icon: Icon, title, description, result, patientContext, onRun, isProcessing }: ModalityPanelProps) {
   const [dragActive, setDragActive] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -33,10 +32,6 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
     if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0])
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) handleFile(e.target.files[0])
-  }
-
   const handleFile = (file: File) => {
     const validTypes = {
       breath: ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/flac', 'audio/x-wav'],
@@ -48,10 +43,15 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
       return
     }
     setPreviewUrl(URL.createObjectURL(file))
-    // dropped files carry an absolute path (injected by the webview) — run the
-    // inference directly on it; without a path fall back to the dialog
+    // In Tauri v2, dropped files have .path injected by the webview.
+    // If present, run inference directly; otherwise delegate to Tauri dialog via onRun(modality)
     const path = (file as any).path
-    onRun(modality, path || undefined)
+    if (path) {
+      onRun(modality, path)
+    } else {
+      // No path available (shouldn't happen in Tauri for drops), fall back to dialog
+      onRun(modality)
+    }
   }
 
   const formatTime = (ms: number) => `${ms.toFixed(0)} ms`
@@ -65,7 +65,7 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
       case 'breath':
         return (
           <div className="space-y-4 animate-fade-in">
-            <div className="flex items-baseline gap-3">
+            <div className="flex items-baseline gap-3 flex-wrap">
               <span className="mono text-sm text-white">{r.prediction}</span>
               <span className="badge">{formatTime(result.inference_time_ms || 0)}</span>
               <ConfidenceBadge modality={modality} result={result} />
@@ -90,7 +90,7 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
       case 'cxr':
         return (
           <div className="space-y-4 animate-fade-in">
-            <div className="flex items-baseline gap-3">
+            <div className="flex items-baseline gap-3 flex-wrap">
               <span className="mono text-sm text-white">{r.positive_findings?.length ? `${r.positive_findings.length} findings` : 'no positive findings'}</span>
               <span className="badge">{formatTime(result.inference_time_ms || 0)}</span>
               <ConfidenceBadge modality={modality} result={result} />
@@ -177,7 +177,7 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
           <div className="w-full">
             <div className="panel p-4">{renderResult()}</div>
             <div className="flex gap-2 mt-4">
-              <button onClick={() => fileInputRef.current?.click()} className="btn-secondary">
+              <button onClick={() => onRun(modality)} className="btn-secondary">
                 <Upload className="w-3.5 h-3.5" /> New file
               </button>
               <button className="btn-ghost">
@@ -187,9 +187,7 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
           </div>
         ) : (
           <div
-            className={`w-full border border-dashed p-10 transition-colors duration-150 ${
-              dragActive ? '' : ''
-            }`}
+            className={`w-full border border-dashed p-10 transition-colors duration-150 ${dragActive ? '' : ''}`}
             style={{
               borderRadius: 4,
               borderColor: dragActive ? 'var(--accent)' : 'var(--border-bright)',
@@ -200,22 +198,11 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={handleFileSelect}
-              accept={
-                modality === 'breath' ? '.wav,.mp3,.flac' :
-                modality === 'cxr' ? '.dcm,.dicom,.png,.jpg,.jpeg' :
-                '.json,.csv'
-              }
-            />
             <div className="flex flex-col items-center gap-3 text-center">
               <Icon className="w-6 h-6 text-[var(--text-faint)]" strokeWidth={1.6} />
               <div>
                 <p className="text-[12.5px] text-[var(--text-muted)]">Drop a file here, or</p>
-                <button onClick={() => fileInputRef.current?.click()} className="text-[12.5px] text-[var(--accent)] hover:underline mt-0.5">
+                <button onClick={() => onRun(modality)} className="text-[12.5px] text-[var(--accent)] hover:underline mt-0.5">
                   browse
                 </button>
                 <p className="mono text-[10px] text-[var(--text-faint)] mt-2">
