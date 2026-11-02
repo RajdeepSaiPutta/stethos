@@ -9,11 +9,12 @@ interface ModalityPanelProps {
   title: string
   description: string
   result?: any
+  patientContext?: { bmi?: number }
   onRun: (modality: string, filePath?: string) => void
   isProcessing: boolean
 }
 
-export function ModalityPanel({ modality, icon: Icon, title, description, result, onRun, isProcessing }: ModalityPanelProps) {
+export function ModalityPanel({ modality, icon: Icon, title, description, result, patientContext, onRun, isProcessing }: ModalityPanelProps) {
   const [dragActive, setDragActive] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -125,11 +126,16 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
       case 'spirometry':
         return (
           <div className="space-y-4 animate-fade-in">
-            <div className="flex items-baseline gap-3">
+            <div className="flex items-baseline gap-3 flex-wrap">
               <span className="mono text-sm text-white">{r.pattern}</span>
               {r.gold_stage && <span className="badge">{r.gold_stage}</span>}
               <span className="badge">{formatTime(result.inference_time_ms || 0)}</span>
               <ConfidenceBadge modality={modality} result={result} />
+              {patientContext?.bmi && (
+                <span className="badge" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                  bmi {patientContext.bmi.toFixed(1)}
+                </span>
+              )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-px" style={{ background: 'var(--border-soft)', border: '1px solid var(--border-soft)' }}>
               {Object.entries(r.predicted_values || {}).map(([k, v]) => (
@@ -143,6 +149,11 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
               <p className="text-[12px] text-[var(--text-muted)]">
                 <span className="text-[var(--text-faint)]">trend</span> {r.trend}
                 <span className="text-[var(--text-faint)]"> · fev1/fvc</span> <span className="mono">{r.fev1_fvc_ratio?.toFixed(2)}</span>
+                {patientContext?.bmi && (
+                  <>
+                    <span className="text-[var(--text-faint)]"> · bmi</span> <span className="mono">{patientContext.bmi.toFixed(1)}</span>
+                  </>
+                )}
               </p>
             </div>
           </div>

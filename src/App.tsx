@@ -503,6 +503,7 @@ export function App() {
               title="Breath Sound Analysis"
               description="Lung sound recording → normal, crackle or wheeze."
               result={modalityResults.breath}
+              patientContext={patientContext}
               onRun={handleFileSelect}
               isProcessing={isProcessing}
             />
@@ -515,6 +516,7 @@ export function App() {
               title="Chest X-Ray Analysis"
               description="Radiograph → pathology classification, segmentation and measurements."
               result={modalityResults.cxr}
+              patientContext={patientContext}
               onRun={handleFileSelect}
               isProcessing={isProcessing}
             />
@@ -527,6 +529,7 @@ export function App() {
               title="Spirometry Analysis"
               description="Flow-volume data → pattern classification, GOLD staging, trajectory."
               result={modalityResults.spirometry}
+              patientContext={patientContext}
               onRun={handleFileSelect}
               isProcessing={isProcessing}
             />
