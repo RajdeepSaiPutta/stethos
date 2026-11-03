@@ -342,9 +342,11 @@ export function App() {
   }
 
   const handleFileSelect = async (modality: string, filePath?: string) => {
+    console.log('[handleFileSelect] called with modality:', modality, 'filePath:', filePath)
     // dropped files arrive with an absolute path (tauri injects it) — skip the
     // dialog and run directly on them
     if (filePath) {
+      console.log('[handleFileSelect] using dropped file path')
       await runModalityInference(modality, filePath)
       return
     }
@@ -353,9 +355,14 @@ export function App() {
       cxr: [{ name: 'Images', extensions: ['dcm', 'dicom', 'png', 'jpg', 'jpeg'] }],
       spirometry: [{ name: 'Data', extensions: ['json', 'csv'] }],
     }
-    const file = await openDialog({ filters: filters[modality as keyof typeof filters], multiple: false })
-    if (file) {
-      await runModalityInference(modality, Array.isArray(file) ? file[0] : file)
+    try {
+      const file = await openDialog({ filters: filters[modality as keyof typeof filters], multiple: false })
+      console.log('[handleFileSelect] openDialog returned:', file)
+      if (file) {
+        await runModalityInference(modality, Array.isArray(file) ? file[0] : file)
+      }
+    } catch (e) {
+      console.error('[handleFileSelect] openDialog error:', e)
     }
   }
 

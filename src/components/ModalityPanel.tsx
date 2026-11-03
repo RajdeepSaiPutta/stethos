@@ -33,6 +33,7 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
   }
 
   const handleFile = (file: File) => {
+    console.log('[ModalityPanel.handleFile] called with file:', file.name, 'type:', file.type, 'path:', (file as any).path)
     const validTypes = {
       breath: ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/flac', 'audio/x-wav'],
       cxr: ['image/dicom', 'application/dicom', 'image/png', 'image/jpeg'],
@@ -47,9 +48,11 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
     // If present, run inference directly; otherwise delegate to Tauri dialog via onRun(modality)
     const path = (file as any).path
     if (path) {
+      console.log('[ModalityPanel.handleFile] using dropped file path:', path)
       onRun(modality, path)
     } else {
       // No path available (shouldn't happen in Tauri for drops), fall back to dialog
+      console.log('[ModalityPanel.handleFile] no path, falling back to dialog')
       onRun(modality)
     }
   }
