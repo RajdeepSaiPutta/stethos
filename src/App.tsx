@@ -5,6 +5,7 @@ import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialo
 import {
   Mic2, Image, Activity, FileText, Stethoscope,
   Layers, Settings2, PanelLeftOpen, PanelLeftClose, History,
+  Users,
 } from 'lucide-react'
 import { ModalityPanel } from './components/ModalityPanel'
 import { FusionPanel } from './components/FusionPanel'
@@ -13,6 +14,7 @@ import { ReportPanel } from './components/ReportPanel'
 import { ModelManager } from './components/ModelManager'
 import { StatusBar } from './components/StatusBar'
 import { HistoryPanel } from './components/HistoryPanel'
+import { StreamingInference } from './components/StreamingInference'
 import { addStudy, basename, summarizeResult } from './lib/studies'
 import { extractProbabilities } from './lib/confidence'
 
@@ -577,6 +579,15 @@ export function App() {
             )}
           </div>
           <div className="flex items-center gap-2.5">
+            {/* Switch Patient Button — go back to welcome screen to select/create patients */}
+            <button
+              onClick={() => { setPatientSelected(false); setPatientContext({ patient_id: '', age: undefined, sex: '' }); }}
+              className="px-2 py-1 text-[10.5px] font-mono bg-[var(--inset)] border border-[var(--border)] rounded-[3px] text-[var(--text-faint)] hover:text-[var(--text)] hover:border-[var(--accent)] transition-colors"
+              title="Switch patient"
+            >
+              <Users className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.8} />
+              Switch Patient
+            </button>
             {gpuOn && (
               <span className="text-[10px] font-mono text-[var(--text-faint)] hidden md:inline">
                 {gpuInfo?.gpu_name}
@@ -618,16 +629,28 @@ export function App() {
           )}
 
           {view === 'breath' && (
-            <ModalityPanel
-              modality="breath"
-              icon={Mic2}
-              title="Breath Sound Analysis"
-              description="Lung sound recording → normal, crackle or wheeze."
-              result={modalityResults.breath}
-              patientContext={patientContext}
-              onRun={handleFileSelect}
-              isProcessing={isProcessing}
-            />
+            <div className="flex-1 flex flex-col">
+              <ModalityPanel
+                modality="breath"
+                icon={Mic2}
+                title="Breath Sound Analysis"
+                description="Lung sound recording → normal, crackle or wheeze."
+                result={modalityResults.breath}
+                patientContext={patientContext}
+                onRun={handleFileSelect}
+                isProcessing={isProcessing}
+              />
+              <div className="border-t border-[var(--border-soft)] p-4">
+                <StreamingInference
+                  modality="breath"
+                  onResult={(result) => {
+                    // Could auto-trigger inference on streaming results
+                    console.log('Streaming result:', result)
+                  }}
+                  autoStart={false}
+                />
+              </div>
+            </div>
           )}
 
           {view === 'cxr' && (
@@ -932,7 +955,6 @@ function NewPatientForm({ registry, onCreate }: { registry: Record<string, Patie
           onChange={e => setId(e.target.value)}
           placeholder={nextId}
           className="input text-sm"
-          readOnly={!id}
         />
         <input
           type="number"

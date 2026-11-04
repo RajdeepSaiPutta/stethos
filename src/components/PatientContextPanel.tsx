@@ -180,8 +180,13 @@ export function PatientContextPanel({
           value={draft.sex}
           onChange={e => setDraft({ ...draft, sex: e.target.value })}
           disabled={!editing}
-          placeholder="M / F / Other"
+          placeholder=""
           icon={<User className="w-4 h-4" />}
+          options={[
+            { value: 'M', label: 'Male' },
+            { value: 'F', label: 'Female' },
+            { value: 'O', label: 'Other' },
+          ]}
         />
         <Field
           label="Height (cm)"
@@ -224,25 +229,40 @@ export function PatientContextPanel({
 interface FieldProps {
   label: string
   value: string | number | undefined
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
   type?: string
   disabled?: boolean
   placeholder?: string
   icon?: React.ReactNode
+  options?: Array<{ value: string; label: string }>
 }
 
-function Field({ label, value, onChange, type = 'text', disabled, placeholder, icon }: FieldProps) {
+function Field({ label, value, onChange, type = 'text', disabled, placeholder, icon, options }: FieldProps) {
   return (
     <div className="space-y-1">
       <label className="text-xs text-gray-500 flex items-center gap-1">{label} {icon && <span className="text-gray-600">{icon}</span>}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        placeholder={placeholder}
-        className={`input ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-      />
+      {options ? (
+        <select
+          value={value ?? ''}
+          onChange={onChange}
+          disabled={disabled}
+          className={`input ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <option value="">{placeholder}</option>
+          {options.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type={type}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          placeholder={placeholder}
+          className={`input ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        />
+      )}
     </div>
   )
 }

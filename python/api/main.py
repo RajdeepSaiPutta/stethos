@@ -21,6 +21,10 @@ from plugins.breath import register_breath_plugin
 from plugins.cxr import register_cxr_plugin
 from plugins.spirometry import register_spirometry_plugin
 from plugins.fusion import register_fusion_plugin
+from plugins.trajectory import create_longitudinal_plugin
+from plugins.radiomics import create_3d_cxr_plugin
+from plugins.fhir_export import export_fhir_from_stethos
+from plugins.uncertainty import create_breath_uq, create_cxr_uq, create_spirometry_uq
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -79,6 +83,15 @@ register_cxr_plugin(
 )
 register_spirometry_plugin(str(MODEL_DIR / "spirometry.pt") if (MODEL_DIR / "spirometry.pt").exists() else None)
 register_fusion_plugin(str(MODEL_DIR / "fusion.pt") if (MODEL_DIR / "fusion.pt").exists() else None)
+
+# Register new plugins
+longitudinal_plugin = create_longitudinal_plugin(str(MODEL_DIR / "spirometry_trajectory.pt") if (MODEL_DIR / "spirometry_trajectory.pt").exists() else None)
+cxr_3d_plugin = create_3d_cxr_plugin(str(MODEL_DIR / "cxr_3d_segmenter.pt") if (MODEL_DIR / "cxr_3d_segmenter.pt").exists() else None)
+
+# Register uncertainty quantifiers
+breath_uq = create_breath_uq()
+cxr_uq = create_cxr_uq()
+spirometry_uq = create_spirometry_uq()
 
 # Load models on startup
 @app.on_event("startup")
@@ -294,6 +307,167 @@ async def download_model(request: ModelDownloadRequest):
         return {"message": f"Downloaded {model_name} to {local_path}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
+
+# Longitudinal trajectory prediction
+class TrajectoryRequest(BaseModel):
+    patient_id: str
+    historical_visits: List[Dict[str, float]]
+    time_deltas: Optional[List[float]] = None
+    forecast_horizon: int = 5
+
+
+@app.post("/trajectory")
+async def predict_trajectory(request: TrajectoryRequest):
+    """Predict longitudinal spirometry trajectory."""
+    try:
+        prediction = longitudinal_plugin.predict_trajectory(
+            request.historical_visits,
+            request.time_deltas,
+            request.forecast_horizon
+        )
+        return {
+            "patient_id": request.patient_id,
+            "predicted_visits": prediction.predicted_visits,
+            "time_horizon": prediction.time_horizon,
+            "confidence_intervals": prediction.confidence_intervals,
+            "progression_risk": prediction.progression_risk,
+            "gold_progression": prediction.gold_progression
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 3D CXR segmentation + radiomics
+class CXR3DRequest(BaseModel):
+    volume_path: str
+    lesion_mask_path: Optional[str] = None
+    spacing: Optional[List[float]] = None
+
+
+@app.post("/cxr/3d")
+async def cxr_3d_analysis(request: CXR3DRequest):
+    """3D segmentation and radiomics extraction."""
+    try:
+        import numpy as np
+        volume = np.load(request.volume_path) if request.volume_path.endswith('.npy') else np.array([])
+        masks = cxr_3d_plugin.segment_volume(volume)
+
+        result = {"masks": {k: v.tolist() for k, v in masks.items()}}
+
+        if request.lesion_mask_path:
+            lesion_mask = np.load(request.lesion_mask_path)
+            spacing = tuple(request.spacing) if request.spacing else None
+            radiomics = cxr_3d_plugin.extract_radiomics(volume, lesion_mask, spacing)
+            result["radiomics"] = {
+                "first_order": radiomics.first_order,
+                "shape": radiomics.shape,
+                "glcm": radiomics.glcm,
+                "glrlm": radiomics.glrlm,
+                "glszm": radiomics.glszm,
+                "ngtdm": radiomics.ngtdm,
+                "gldm": radiomics.gldm
+            }
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Uncertainty quantification endpoints
+class UQCalibrationRequest(BaseModel):
+    modality: str  # breath, cxr, spirometry
+    logits: List[List[float]]
+    labels: List[int]
+
+
+@app.post("/uq/calibrate")
+async def calibrate_uq(request: UQCalibrationRequest):
+    """Calibrate uncertainty quantifier."""
+    uq_map = {"breath": breath_uq, "cxr": cxr_uq, "spirometry": spirometry_uq}
+    uq = uq_map.get(request.modality)
+    if not uq:
+        raise HTTPException(status_code=404, detail=f"UQ not available for {request.modality}")
+
+    import torch
+    logits_tensor = torch.tensor(request.logits, dtype=torch.float32)
+    labels_tensor = torch.tensor(request.labels, dtype=torch.long)
+
+    result = uq.calibrate(logits_tensor, labels_tensor)
+    return result
+
+
+class UQPredictRequest(BaseModel):
+    modality: str
+    logits: List[List[float]]
+
+
+@app.post("/uq/predict")
+async def predict_with_uq(request: UQPredictRequest):
+    """Predict with uncertainty quantification."""
+    uq_map = {"breath": breath_uq, "cxr": cxr_uq, "spirometry": spirometry_uq}
+    uq = uq_map.get(request.modality)
+    if not uq:
+        raise HTTPException(status_code=404, detail=f"UQ not available for {request.modality}")
+
+    import torch
+    logits_tensor = torch.tensor(request.logits, dtype=torch.float32)
+
+    result = uq.predict_with_uncertainty(logits_tensor)
+    return result
+
+
+# FHIR + CDS Hooks export
+class FHIRExportRequest(BaseModel):
+    patient_id: str
+    modality_results: Dict[str, Any]
+    fusion_result: Optional[Dict[str, Any]] = None
+    patient_context: Optional[Dict[str, Any]] = None
+    output_path: Optional[str] = None
+
+
+@app.post("/export/fhir")
+async def export_fhir(request: FHIRExportRequest):
+    """Export results as FHIR Bundle + CDS Hooks."""
+    try:
+        result = export_fhir_from_stethos(
+            request.patient_id,
+            request.modality_results,
+            request.fusion_result,
+            request.patient_context,
+            request.output_path
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Federated learning client info
+@app.get("/federated/info")
+async def federated_info():
+    return {
+        "available": True,
+        "framework": "Flower (flwr)",
+        "modalities": ["breath", "cxr", "spirometry", "fusion"],
+        "privacy": ["differential_privacy", "secure_aggregation"]
+    }
+
+
+# Streaming inference status
+@app.get("/streaming/status")
+async def streaming_status():
+    return {
+        "available": True,
+        "modality": "breath",
+        "config": {
+            "sample_rate": 16000,
+            "window_duration": 2.0,
+            "hop_duration": 1.0,
+            "n_mels": 64
+        },
+        "offline_support": True
+    }
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8765, log_level="info")

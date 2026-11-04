@@ -149,6 +149,27 @@ code, pre, kbd, .mono {
     border-color: var(--accent);
   }
 
+  /* select dropdown fix - ensure options are readable */
+  select.input {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%239aa0a8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-right: 32px;
+    appearance: none;
+  }
+  select.input option {
+    background: var(--inset);
+    color: var(--text);
+  }
+  select.input option:checked {
+    background: var(--accent);
+    color: white;
+  }
+  select.input option:hover {
+    background: var(--chrome-2);
+  }
+
   .label {
     @apply block text-[11px] text-gray-500 mb-1;
   }

@@ -1,0 +1,87 @@
+{
+  "name": "Stethos",
+  "short_name": "Stethos",
+  "description": "Local ML Diagnostics for Respiratory Analysis",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#00d4aa",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["medical", "health", "productivity"],
+  "shortcuts": [
+    {
+      "name": "New Breath Analysis",
+      "short_name": "Breath",
+      "description": "Analyze breath sounds",
+      "url": "/#breath",
+      "icons": [{ "src": "/icons/breath-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "New CXR Analysis",
+      "short_name": "CXR",
+      "description": "Analyze chest X-ray",
+      "url": "/#cxr",
+      "icons": [{ "src": "/icons/cxr-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "New Spirometry",
+      "short_name": "Spirometry",
+      "description": "Analyze spirometry",
+      "url": "/#spirometry",
+      "icons": [{ "src": "/icons/spiro-96.png", "sizes": "96x96" }]
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": []
+}
