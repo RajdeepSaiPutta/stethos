@@ -75,44 +75,71 @@ const OTHER_VIEWS: { id: View; label: string; icon: React.ComponentType<{ classN
 
 export function App() {
   const [view, setView] = useState<View>('dashboard')
-  // session results survive even if the app shell resets its ui state (or the
-  // webview reloads): stored locally, rehydrated on mount, cleared when the
-  // patient id changes. nothing here touches the network.
-  const [patientContext, setPatientContext] = useState<PatientContext>({
-    patient_id: '',
-    age: undefined,
-    sex: '',
+
+  // Load patient registry and current patient from localStorage
+  const [patientRegistry, setPatientRegistry] = useState<Record<string, PatientContext>>(() => {
+    try { return JSON.parse(localStorage.getItem('stethos.patients') || '{}') } catch { return {} }
   })
-  const [modalityResults, setModalityResults] = useState<Record<string, ModalityResult>>(() => {
+  const [patientContext, setPatientContext] = useState<PatientContext>(() => {
     try {
-      return JSON.parse(localStorage.getItem('stethos.session') || '{}').results || {}
+      const currentId = localStorage.getItem('stethos.currentPatient')
+      const registry = JSON.parse(localStorage.getItem('stethos.patients') || '{}')
+      if (currentId && registry[currentId]) return registry[currentId]
+    } catch {}
+    return { patient_id: '', age: undefined, sex: '' }
+  })
+
+  // Session data is now per-patient: load from stethos.session.{patient_id}
+  const [modalityResults, setModalityResults] = useState<Record<string, ModalityResult>>(() => {
+    if (!patientContext.patient_id) return {}
+    try {
+      return JSON.parse(localStorage.getItem(`stethos.session.${patientContext.patient_id}`) || '{}').results || {}
     } catch { return {} }
   })
   const [fusionResult, setFusionResult] = useState<FusionResult | null>(() => {
+    if (!patientContext.patient_id) return null
     try {
-      return JSON.parse(localStorage.getItem('stethos.session') || '{}').fusion || null
+      return JSON.parse(localStorage.getItem(`stethos.session.${patientContext.patient_id}`) || '{}').fusion || null
     } catch { return null }
   })
 
-  // persist the session bundle on every change
+  // Persist patient registry
   useEffect(() => {
+    try { localStorage.setItem('stethos.patients', JSON.stringify(patientRegistry)) } catch {}
+  }, [patientRegistry])
+
+  // Persist current patient selection
+  useEffect(() => {
+    localStorage.setItem('stethos.currentPatient', patientContext.patient_id || '')
+  }, [patientContext.patient_id])
+
+  // Persist session data per patient
+  useEffect(() => {
+    if (!patientContext.patient_id) return
     try {
-      localStorage.setItem('stethos.session', JSON.stringify({
+      localStorage.setItem(`stethos.session.${patientContext.patient_id}`, JSON.stringify({
         at: Date.now(),
         results: modalityResults,
         fusion: fusionResult,
       }))
     } catch { /* storage full — session persistence is best-effort */ }
-  }, [modalityResults, fusionResult])
+  }, [patientContext.patient_id, modalityResults, fusionResult])
 
-  // a fresh session per patient: switching patients clears stale results
+  // When patientContext changes (switch patient), reload that patient's session
   useEffect(() => {
-    const prev = localStorage.getItem('stethos.session.patient')
-    if (patientContext.patient_id && prev && prev !== patientContext.patient_id) {
+    if (!patientContext.patient_id) {
+      setModalityResults({})
+      setFusionResult(null)
+      return
+    }
+    try {
+      const session = JSON.parse(localStorage.getItem(`stethos.session.${patientContext.patient_id}`) || '{}')
+      setModalityResults(session.results || {})
+      setFusionResult(session.fusion || null)
+    } catch {
       setModalityResults({})
       setFusionResult(null)
     }
-    localStorage.setItem('stethos.session.patient', patientContext.patient_id || '')
   }, [patientContext.patient_id])
 
   // capture every js error into a local diagnostics ring so crashes that
@@ -463,6 +490,16 @@ export function App() {
               context={patientContext}
               onChange={setPatientContext}
               compact={!sidebarOpen}
+              registry={patientRegistry}
+              currentPatientId={patientContext.patient_id}
+              onSwitchPatient={(id) => {
+                const p = patientRegistry[id]
+                if (p) setPatientContext(p)
+              }}
+              onCreatePatient={(id, ctx) => {
+                setPatientRegistry(prev => ({ ...prev, [id]: ctx }))
+                setPatientContext(ctx)
+              }}
             />
           </div>
         )}
