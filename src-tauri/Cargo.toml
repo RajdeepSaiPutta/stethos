@@ -7,7 +7,10 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["devtools"] }
+# `devtools` is REQUIRED for diagnosis in the shipped binary: without it the
+# release/production build has no Ctrl+Shift+I webview inspector, which is the
+# only way to see console logs and exceptions in the built app.
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-opener = "2"

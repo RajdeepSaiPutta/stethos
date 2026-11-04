@@ -249,11 +249,13 @@ export function App() {
   const runModalityInference = async (modality: string, filePath: string, options: Record<string, any> = {}) => {
     setIsProcessing(true)
     try {
+      // Tauri v2 matches invoke args by camelCase of the rust parameter name
+      // (input_path -> inputPath); snake_case keys silently fail with
+      // "missing required key ..." from inside the dialog/drop flow.
       const result = await invoke<ModalityResult>('run_inference', {
         modality,
-        input_path: filePath,
+        inputPath: filePath,
         options,
-        patient_id: patientContext.patient_id || undefined,
       })
       // functional update: never writes from a stale snapshot, so a slow run
       // finishing late can't wipe another modality's result
@@ -293,6 +295,14 @@ export function App() {
       return result
     } catch (e) {
       console.error('Inference failed:', e)
+      // surface the failure for this modality instead of silently doing
+      // nothing — the panel renders result.error
+      const err = e instanceof Error ? e.message : String(e)
+      setModalityResults(prev => {
+        const next = { ...prev, [modality]: { modality, success: false, error: err } as ModalityResult }
+        modalityResultsRef.current = next
+        return next
+      })
       throw e
     } finally {
       setIsProcessing(false)
@@ -312,10 +322,15 @@ export function App() {
 
     setIsProcessing(true)
     try {
+      // run_fusion_inference's rust signature is a single `inputs` object;
+      // Tauri v2 arg casing also requires camelCase nested keys stay as the
+      // python FusionRequest expects (snake_case fields inside the payload).
       const result = await invoke<FusionResult>('run_fusion_inference', {
-        modalities: successfulModalities,
-        patient_context: patientContext,
-        fusion_options: {}
+        inputs: {
+          modalities: successfulModalities,
+          patient_context: patientContext,
+          fusion_options: {},
+        },
       })
       setFusionResult(result)
 
@@ -379,7 +394,7 @@ export function App() {
         spirometry: modalityResults.spirometry,
         fusion: fusionResult,
       }
-      await invoke('export_report', { format, data, output_path: filePath })
+      await invoke('export_report', { format, data, outputPath: filePath })
     }
   }
 

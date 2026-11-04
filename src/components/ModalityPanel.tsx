@@ -1,7 +1,13 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Upload, Loader2, Download } from 'lucide-react'
 import { ConfidenceBadge } from './ConfidenceBadge'
 import { Xray3DViewer } from './Xray3DViewer'
+import {
+  INSIDE_TAURI,
+  isDuplicateDrop,
+  basenameOfPath,
+  subscribeTauriDragDrop,
+} from '../lib/dragdrop'
 
 interface ModalityPanelProps {
   modality: string
@@ -20,6 +26,50 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [show3D, setShow3D] = useState(true)
 
+  // extension allow-list per modality — the source of truth for both the
+  // native drag-drop path (paths only, no File object) and the DOM drop path
+  const allowedExtensions: Record<string, string[]> = {
+    breath: ['wav', 'mp3', 'flac'],
+    cxr: ['dcm', 'dicom', 'png', 'jpg', 'jpeg'],
+    spirometry: ['json', 'csv'],
+  }
+  const extOf = (name: string) => name.slice(name.lastIndexOf('.') + 1).toLowerCase()
+  const isAllowedName = useCallback(
+    (name: string) => (allowedExtensions[modality] || []).includes(extOf(name)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [modality],
+  )
+
+  const runFile = (name: string, path: string) => {
+    if (!isAllowedName(name)) {
+      alert(`Invalid file type for ${title}`)
+      return
+    }
+    onRun(modality, path)
+  }
+
+  // keep the latest onRun in a ref so the native-drag subscription below is
+  // created once per mount instead of re-subscribing on every App re-render
+  // (mode of the active panel's inference callback)
+  const onRunRef = useRef(onRun)
+  onRunRef.current = onRun
+
+  // NATIVE drag and drop — the authoritative path in Tauri. The webview does
+  // not inject File.path into DOM drop events on WebKitGTK (linux), so dropped
+  // files are handled through the webview drag-drop event, which always
+  // carries real absolute paths.
+  useEffect(() => {
+    return subscribeTauriDragDrop((paths) => {
+      const name = basenameOfPath(paths[0])
+      if (!(allowedExtensions[modality] || []).includes(extOf(name))) {
+        alert(`Invalid file type for ${title}`)
+        return
+      }
+      onRunRef.current(modality, paths[0])
+    }, setDragActive)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modality])
+
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -31,32 +81,32 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0])
+    const file = e.dataTransfer.files[0]
+    if (!file) return
+    handleFile(file)
   }
 
   const handleFile = (file: File) => {
     console.log('[ModalityPanel.handleFile] called with file:', file.name, 'type:', file.type, 'path:', (file as any).path)
-    const validTypes = {
-      breath: ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/flac', 'audio/x-wav'],
-      cxr: ['image/dicom', 'application/dicom', 'image/png', 'image/jpeg'],
-      spirometry: ['application/json', 'text/csv'],
-    }
-    if (!validTypes[modality as keyof typeof validTypes]?.some(t => file.type === t || file.name.endsWith(t.replace('audio/', '').replace('image/', '').replace('application/', '').replace('text/', '.')))) {
-      alert(`Invalid file type for ${title}`)
+    const path = (file as any).path
+    if (INSIDE_TAURI) {
+      // inside Tauri the native drag-drop event (above) is the source of
+      // truth; the DOM drop is only honored for a File with an injected path
+      // (deduped so one gesture can never run twice)
+      setPreviewUrl(URL.createObjectURL(file))
+      if (!path) {
+        console.log('[ModalityPanel.handleFile] no injected path (WebKitGTK) — native drag-drop event handles this drop')
+        return
+      }
+      if (isDuplicateDrop(basenameOfPath(path))) {
+        console.log('[ModalityPanel.handleFile] duplicate of native drop, skipping')
+        return
+      }
+      runFile(file.name, path)
       return
     }
-    setPreviewUrl(URL.createObjectURL(file))
-    // In Tauri v2, dropped files have .path injected by the webview.
-    // If present, run inference directly; otherwise delegate to Tauri dialog via onRun(modality)
-    const path = (file as any).path
-    if (path) {
-      console.log('[ModalityPanel.handleFile] using dropped file path:', path)
-      onRun(modality, path)
-    } else {
-      // No path available (shouldn't happen in Tauri for drops), fall back to dialog
-      console.log('[ModalityPanel.handleFile] no path, falling back to dialog')
-      onRun(modality)
-    }
+    // browser preview: show a preview only — there is no sidecar bridge here
+    console.log('[ModalityPanel.handleFile] browser preview: no Tauri bridge, file not runnable')
   }
 
   const formatTime = (ms: number) => `${ms.toFixed(0)} ms`
