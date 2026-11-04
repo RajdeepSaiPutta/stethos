@@ -89,6 +89,13 @@ export function App() {
     return { patient_id: '', age: undefined, sex: '' }
   })
 
+  // Track whether a patient has been selected (for first-launch welcome screen)
+  const [patientSelected, setPatientSelected] = useState(() => {
+    try {
+      return !!localStorage.getItem('stethos.currentPatient')
+    } catch { return false }
+  })
+
   // Session data is now per-patient: load from stethos.session.{patient_id}
   const [modalityResults, setModalityResults] = useState<Record<string, ModalityResult>>(() => {
     if (!patientContext.patient_id) return {}
@@ -111,6 +118,7 @@ export function App() {
   // Persist current patient selection
   useEffect(() => {
     localStorage.setItem('stethos.currentPatient', patientContext.patient_id || '')
+    if (patientContext.patient_id) setPatientSelected(true)
   }, [patientContext.patient_id])
 
   // Persist session data per patient
@@ -429,6 +437,60 @@ export function App() {
   const deviceStr = gpuInfo?.device ?? (gpuInfo?.cuda_available ? 'cuda' : 'cpu')
   const gpuOn = deviceStr !== 'cpu'
   const insideTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
+
+  // Welcome screen — shown on first launch before any patient is selected
+  if (!patientSelected) {
+    return (
+      <div className="h-screen flex bg-[var(--bg)] text-[var(--text)] overflow-hidden">
+        <main className="flex-1 flex flex-col items-center justify-center p-8">
+          <div className="max-w-md w-full text-center animate-fade-in">
+            <Stethoscope className="w-16 h-16 text-[var(--accent)] mx-auto mb-6" strokeWidth={2.2} />
+            <h1 className="text-3xl font-semibold text-white mb-2">Welcome to Stethos</h1>
+            <p className="text-[var(--text-muted)] mb-8">
+              Local ML diagnostics for respiratory analysis. Start by creating or selecting a patient.
+            </p>
+
+            {/* Existing patients */}
+            {Object.keys(patientRegistry).length > 0 && (
+              <div className="mb-6 space-y-3">
+                <p className="text-sm text-[var(--text-faint)] text-left font-medium">Existing Patients</p>
+                {Object.entries(patientRegistry).map(([id, p]) => (
+                  <button
+                    key={id}
+                    onClick={() => { setPatientContext(p); setPatientSelected(true); }}
+                    className="w-full text-left p-4 rounded-[4px] border border-[var(--border)] bg-[var(--chrome)] hover:bg-[var(--chrome-2)] hover:border-[var(--accent)] transition-all"
+                  >
+                    <div className="font-mono text-lg">{id}</div>
+                    <div className="text-sm text-[var(--text-faint)] mt-1">
+                      {p.age && `${p.age}yr · `}{p.sex && `${p.sex} · `}
+                      {p.bmi && `bmi ${p.bmi}`}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Create new patient */}
+            <div className="border-t border-[var(--border-soft)] pt-6">
+              <p className="text-sm text-[var(--text-faint)] text-left font-medium mb-3">Create New Patient</p>
+              <NewPatientForm
+                registry={patientRegistry}
+                onCreate={(id, ctx) => {
+                  setPatientRegistry(prev => ({ ...prev, [id]: ctx }))
+                  setPatientContext(ctx)
+                  setPatientSelected(true)
+                }}
+              />
+            </div>
+
+            <p className="mt-8 text-xs text-[var(--text-faint)]">
+              research tool — not a medical device. all inference runs locally.
+            </p>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen flex bg-[var(--bg)] text-[var(--text)] overflow-hidden">
@@ -829,3 +891,86 @@ function ModalityPreview({ modality, result }: { modality: string; result: Modal
 }
 
 export { isRowPending }
+
+function NewPatientForm({ registry, onCreate }: { registry: Record<string, PatientContext>; onCreate: (id: string, ctx: PatientContext) => void }) {
+  const [id, setId] = useState('')
+  const [age, setAge] = useState('')
+  const [sex, setSex] = useState('')
+  const [height, setHeight] = useState('')
+  const [weight, setWeight] = useState('')
+  const [error, setError] = useState('')
+
+  const nextId = `PAT-${String(Object.keys(registry).length + 1).padStart(3, '0')}`
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    if (!id.trim()) { setError('Patient ID is required'); return }
+    if (registry[id.trim()]) { setError('Patient ID already exists'); return }
+
+    const ageNum = parseInt(age) || undefined
+    const heightNum = parseInt(height) || undefined
+    const weightNum = parseInt(weight) || undefined
+    const bmi = heightNum && weightNum ? parseFloat((weightNum / ((heightNum / 100) ** 2)).toFixed(1)) : undefined
+
+    onCreate(id.trim(), {
+      patient_id: id.trim(),
+      age: ageNum,
+      sex: sex.toUpperCase(),
+      height_cm: heightNum,
+      weight_kg: weightNum,
+      bmi,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 text-left">
+      <div className="grid grid-cols-2 gap-3">
+        <input
+          type="text"
+          value={id || nextId}
+          onChange={e => setId(e.target.value)}
+          placeholder={nextId}
+          className="input text-sm"
+          readOnly={!id}
+        />
+        <input
+          type="number"
+          value={age}
+          onChange={e => setAge(e.target.value)}
+          placeholder="Age"
+          className="input text-sm"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <select value={sex} onChange={e => setSex(e.target.value)} className="input text-sm">
+          <option value="">Sex</option>
+          <option value="M">Male</option>
+          <option value="F">Female</option>
+          <option value="O">Other</option>
+        </select>
+        <input
+          type="number"
+          value={height}
+          onChange={e => setHeight(e.target.value)}
+          placeholder="Height (cm)"
+          className="input text-sm"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <input
+          type="number"
+          value={weight}
+          onChange={e => setWeight(e.target.value)}
+          placeholder="Weight (kg)"
+          className="input text-sm"
+        />
+        <div></div>
+      </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      <button type="submit" className="btn-primary w-full py-2 mt-2">
+        Create Patient
+      </button>
+    </form>
+  )
+}
