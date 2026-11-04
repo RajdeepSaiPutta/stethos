@@ -109,6 +109,7 @@ class CXRPlugin(ModalityPlugin):
         self._classifier_path = classifier_path
         self._segmenter_path = segmenter_path
         self._transform = None
+        self._last_image: Optional[np.ndarray] = None
 
     @property
     def metadata(self) -> ModalityMetadata:
@@ -184,6 +185,9 @@ class CXRPlugin(ModalityPlugin):
 
     def preprocess(self, input_data: InferenceInput) -> torch.Tensor:
         img = self._load_image(input_data.data_path)
+        # stash the windowed render (pre-normalization, [3,512,512] float 0..1 grayscale)
+        # so postprocess can hand the frontend the actual radiograph for the 3D viewer
+        self._last_image = img[0, 0].cpu().numpy()  # [512, 512] float
         img = self._transform(img)
         return img.to(self._device)
 
@@ -256,16 +260,33 @@ class CXRPlugin(ModalityPlugin):
         _, buffer = cv2.imencode('.png', seg_vis)
         seg_b64 = base64.b64encode(buffer).decode('utf-8')
 
+        # Original radiograph (downsampled to 256x256) for the 3D viewer
+        xray_b64 = None
+        if self._last_image is not None:
+            try:
+                vis = np.clip(self._last_image, 0.0, 1.0)
+                vis = (vis * 255.0).astype(np.uint8)
+                vis = cv2.resize(vis, (256, 256), interpolation=cv2.INTER_AREA)
+                ok, xray_buffer = cv2.imencode('.png', vis)
+                if ok:
+                    xray_b64 = base64.b64encode(xray_buffer).decode('utf-8')
+            except Exception as e:
+                logger.warning(f"Could not encode xray image for 3D viewer: {e}")
+
+        results = {
+            "pathologies": pathology_probs,
+            "positive_findings": positive_pathologies,
+            "measurements": measurements,
+            "segmentation_classes": LUNG_CLASSES,
+            "segmentation_overlay": f"data:image/png;base64,{seg_b64}"
+        }
+        if xray_b64:
+            results["xray_image"] = f"data:image/png;base64,{xray_b64}"
+
         return InferenceOutput(
             modality=self.metadata.name,
             success=True,
-            results={
-                "pathologies": pathology_probs,
-                "positive_findings": positive_pathologies,
-                "measurements": measurements,
-                "segmentation_classes": LUNG_CLASSES,
-                "segmentation_overlay": f"data:image/png;base64,{seg_b64}"
-            },
+            results=results,
             metadata={
                 "classifier": "DenseNet121",
                 "segmenter": "MobileNetV3-Small U-Net",

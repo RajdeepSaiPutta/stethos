@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Upload, Loader2, Download } from 'lucide-react'
 import { ConfidenceBadge } from './ConfidenceBadge'
+import { Xray3DViewer } from './Xray3DViewer'
 
 interface ModalityPanelProps {
   modality: string
@@ -17,6 +18,7 @@ interface ModalityPanelProps {
 export function ModalityPanel({ modality, icon: Icon, title, description, result, patientContext, onRun, isProcessing }: ModalityPanelProps) {
   const [dragActive, setDragActive] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [show3D, setShow3D] = useState(true)
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -122,6 +124,18 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
                   green lungs · red heart · yellow trachea
                 </div>
               </div>
+            )}
+            {r.xray_image && show3D && (
+              <Xray3DViewer src={r.xray_image} height={380} />
+            )}
+            {r.xray_image && (
+              <button
+                onClick={() => setShow3D(!show3D)}
+                className="mono text-[10.5px] self-start"
+                style={{ color: 'var(--text-faint)' }}
+              >
+                {show3D ? 'hide 3d view −' : 'show 3d view +'}
+              </button>
             )}
           </div>
         )
