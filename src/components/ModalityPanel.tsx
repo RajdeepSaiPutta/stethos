@@ -24,7 +24,7 @@ interface ModalityPanelProps {
 export function ModalityPanel({ modality, icon: Icon, title, description, result, patientContext, onRun, isProcessing }: ModalityPanelProps) {
   const [dragActive, setDragActive] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [show3D, setShow3D] = useState(true)
+  const [show3D, setShow3D] = useState(false)
 
   // extension allow-list per modality — the source of truth for both the
   // native drag-drop path (paths only, no File object) and the DOM drop path
@@ -172,6 +172,14 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
                 <img src={r.segmentation_overlay} alt="Segmentation" className="w-full h-full object-cover" />
                 <div className="absolute bottom-2 left-2 right-2 bg-black/75 px-2.5 py-1 text-[10px] font-mono text-gray-300">
                   green lungs · red heart · yellow trachea
+                </div>
+              </div>
+            )}
+            {r.xray_image && !show3D && (
+              <div className="relative overflow-hidden" style={{ border: '1px solid var(--border)', borderRadius: 4, maxWidth: 520, background: '#05070b' }}>
+                <img src={r.xray_image} alt="Radiograph" className="w-full h-auto object-contain" style={{ display: 'block' }} />
+                <div className="absolute bottom-2 left-2 bg-black/75 px-2 py-0.5 mono text-[9.5px] text-gray-300" style={{ borderRadius: 3 }}>
+                  windowed radiograph
                 </div>
               </div>
             )}

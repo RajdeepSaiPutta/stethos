@@ -275,6 +275,10 @@ export function App() {
   }, [deviceBusy, checkHealth])
 
   useEffect(() => {
+    // the tauri event bridge only exists inside the app shell; calling listen()
+    // in browser preview throws an unhandled rejection at startup
+    const insideTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
+    if (!insideTauri) return
     const unlisten = listen('python-output', (event: Event<string>) => {
       console.log('[Python]', event.payload)
     })
@@ -951,7 +955,7 @@ function NewPatientForm({ registry, onCreate }: { registry: Record<string, Patie
       <div className="grid grid-cols-2 gap-3">
         <input
           type="text"
-          value={id || nextId}
+          value={id}
           onChange={e => setId(e.target.value)}
           placeholder={nextId}
           className="input text-sm"

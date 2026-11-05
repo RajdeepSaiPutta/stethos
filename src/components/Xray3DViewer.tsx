@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import {
@@ -103,6 +103,21 @@ interface Measurement {
   unit: string
 }
 
+// Some WebKitGTK builds expose no usable WebGL context. Probing up front keeps
+// the viewer from crashing the whole webview when that happens.
+function webglAvailable(): boolean {
+  try {
+    const canvas = document.createElement('canvas')
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    if (!gl) return false
+    const lose = (gl as WebGLRenderingContext).getExtension('WEBGL_lose_context')
+    if (lose) lose.loseContext()
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function Xray3DViewer({ src, height = 380 }: Xray3DViewerProps) {
   const canvasHostRef = useRef<HTMLDivElement>(null)
   const dataRef = useRef<Float32Array | null>(null)
@@ -133,6 +148,23 @@ export function Xray3DViewer({ src, height = 380 }: Xray3DViewerProps) {
   const [showCrosshair, setShowCrosshair] = useState(false)
   const [crosshairPos, setCrosshairPos] = useState({x: 0, y: 0})
   const [showFullscreen, setShowFullscreen] = useState(false)
+
+  // Histogram is derived from the sampled volume. Computed here (before any
+  // early return) so hook order never changes between renders.
+  const histogramData = useMemo(() => {
+    const hist = new Array(256).fill(0)
+    const data = dataRef.current
+    if (data) {
+      for (let i = 0; i < data.length; i++) {
+        const v = Math.floor(data[i] * 255)
+        hist[Math.min(255, Math.max(0, v))]++
+      }
+    }
+    return hist
+    // `ready` flips after dataRef is filled, which is when the histogram matters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, src])
+
   
   // Presets
   const presets = [
@@ -161,9 +193,20 @@ export function Xray3DViewer({ src, height = 380 }: Xray3DViewerProps) {
     if (!ready || !canvasHostRef.current || !dataRef.current) return
     const host = canvasHostRef.current
 
+    if (!webglAvailable()) {
+      console.warn('[Xray3DViewer] WebGL is not available in this webview')
+      setFailed(true)
+      return
+    }
+
     let renderer: THREE.WebGLRenderer
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        preserveDrawingBuffer: true,
+        powerPreference: 'high-performance',
+        failIfMajorPerformanceCaveat: false,
+      })
     } catch (e) {
       console.error('[Xray3DViewer] WebGL init failed:', e)
       setFailed(true)
@@ -176,6 +219,13 @@ export function Xray3DViewer({ src, height = 380 }: Xray3DViewerProps) {
     renderer.domElement.style.height = '100%'
     renderer.domElement.style.display = 'block'
     renderer.domElement.style.touchAction = 'none'
+
+    let disposed = false
+    const onContextLost = (event: Event) => {
+      event.preventDefault()
+      if (!disposed) setFailed(true)
+    }
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost, false)
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 100)
@@ -342,15 +392,27 @@ export function Xray3DViewer({ src, height = 380 }: Xray3DViewerProps) {
     }
 
     let raf = 0
+    let frameError = false
     const tick = () => {
+      if (disposed) return
       raf = requestAnimationFrame(tick)
-      controls.update()
-      renderer.render(scene, camera)
+      try {
+        controls.update()
+        renderer.render(scene, camera)
+      } catch (e) {
+        if (!frameError) {
+          frameError = true
+          console.error('[Xray3DViewer] render loop failed:', e)
+          if (!disposed) setFailed(true)
+        }
+      }
     }
     tick()
 
     return () => {
+      disposed = true
       cancelAnimationFrame(raf)
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost)
       ro.disconnect()
       controls.dispose()
       solidMat.dispose()
@@ -393,22 +455,14 @@ export function Xray3DViewer({ src, height = 380 }: Xray3DViewerProps) {
   if (failed) {
     return (
       <div className="inset-well flex items-center justify-center" style={{ height, borderRadius: 4 }}>
-        <p className="mono text-[10.5px] text-[var(--text-faint)]">3d view unavailable · re-run scan to enable</p>
+        <p className="mono text-[10.5px] text-[var(--text-faint)] text-center px-4">
+          3d view unavailable in this webview · hide it to see the radiograph in 2d
+        </p>
       </div>
     )
   }
 
-  const histogramData = useRef<Array<number>>([])
-  if (dataRef.current && histogramData.current.length === 0) {
-    const hist = new Array(256).fill(0)
-    for (let i = 0; i < dataRef.current.length; i++) {
-      const v = Math.floor(dataRef.current[i] * 255)
-      hist[Math.min(255, Math.max(0, v))]++
-    }
-    histogramData.current = hist
-  }
-
-  const maxHist = Math.max(...histogramData.current)
+  const maxHist = Math.max(...histogramData)
 
   return (
     <div className="space-y-2">
@@ -649,10 +703,10 @@ export function Xray3DViewer({ src, height = 380 }: Xray3DViewerProps) {
             <button onClick={() => setShowHistogram(false)} className="text-[var(--text-faint)] hover:text-[var(--text)]">×</button>
           </div>
           <div className="flex items-end h-24 gap-[1px]" style={{ background: 'var(--inset)', borderRadius: 3 }}>
-            {histogramData.current.map((count, i) => (
+            {histogramData.map((count, i) => (
               <div key={i} className="flex-1" style={{
                 height: maxHist > 0 ? `${(count / maxHist) * 100}%` : 0,
-                background: `hsl(\${200 + i * 0.5}, 70%, 50%)`,
+                background: `hsl(${200 + i * 0.5}, 70%, 50%)`,
                 transition: 'height 0.1s',
               }} />
             ))}
