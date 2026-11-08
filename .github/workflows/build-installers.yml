@@ -1,12 +1,6 @@
 name: Build installers
 
 on:
-  workflow_dispatch:
-    inputs:
-      cuda:
-        description: Bundle CUDA torch on Linux/Windows (large, ~2.5 GB)
-        type: boolean
-        default: false
   push:
     tags:
       - "v*"
@@ -59,19 +53,11 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      # ---- inference sidecar -------------------------------------------------
+      # ---- inference sidecar (CPU only on CI) -------------------------------
       - name: Install Python build dependencies (CPU)
-        if: ${{ !inputs.cuda || matrix.platform == 'macos' }}
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r python/requirements-sidecar.txt --extra-index-url https://download.pytorch.org/whl/cpu
-
-      - name: Install Python build dependencies (CUDA)
-        if: ${{ inputs.cuda && matrix.platform != 'macos' }}
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r python/requirements-sidecar.txt
-          python -m pip install --force-reinstall torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 
       - name: Build inference sidecar
         working-directory: python
