@@ -119,11 +119,17 @@ async function collectArtifacts() {
     throw new Error(`no installers were produced under ${bundleRoot}`)
   }
 
-  // Hash everything currently in the folder, so running the script once per
-  // bundle target still leaves one complete checksum manifest.
+  // Hash the installers only. Documentation files are renamed when artifacts
+  // are merged for a release, so including them would make `sha256sum -c`
+  // fail on the downloaded assets.
+  const installerSuffixes = ['.deb', '.rpm', '.AppImage', '.pkg.tar.zst', '.exe', '.msi', '.dmg', '.app.zip']
   const allArtifacts = readdirSync(outDir)
     .map((entry) => join(outDir, entry))
-    .filter((file) => statSync(file).isFile() && basename(file) !== 'SHA256SUMS.txt')
+    .filter(
+      (file) =>
+        statSync(file).isFile() &&
+        installerSuffixes.some((suffix) => basename(file).endsWith(suffix)),
+    )
     .sort()
 
   const sums = (
