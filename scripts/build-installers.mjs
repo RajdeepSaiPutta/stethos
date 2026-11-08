@@ -42,7 +42,13 @@ const withSidecar = !flag('--no-sidecar')
 
 function run(command, cmdArgs, cwd = ROOT) {
   console.log(`\n$ ${command} ${cmdArgs.join(' ')}`)
-  execFileSync(command, cmdArgs, { cwd, stdio: 'inherit' })
+  // Windows resolves npm/npx through .cmd shims, which Node refuses to spawn
+  // without a shell.
+  execFileSync(command, cmdArgs, {
+    cwd,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  })
 }
 
 function rustHostTriple() {
