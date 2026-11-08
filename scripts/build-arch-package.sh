@@ -15,9 +15,9 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "${STAGE}"' EXIT
 
 BIN="${ROOT}/src-tauri/target/release/stethos"
-SIDECAR="${ROOT}/python/dist/stethos-sidecar"
+SIDECAR="${SIDECAR:-${ROOT}/python/dist/stethos-sidecar}"
 ICONS="${ROOT}/src-tauri/icons"
-OUT_DIR="${ROOT}/release/linux"
+OUT_DIR="${OUT_DIR:-${ROOT}/release/linux}"
 
 for f in "${BIN}" "${SIDECAR}"; do
   [[ -f "${f}" ]] || { echo "missing ${f} - build the app first" >&2; exit 1; }

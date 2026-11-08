@@ -30,3 +30,6 @@ release/**/*.zip
 release/**/SHA256SUMS.txt
 python/build-gpu/
 python/dist-gpu/
+
+python/build-cpu/
+python/dist-cpu/

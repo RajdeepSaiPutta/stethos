@@ -14,8 +14,12 @@ Built with Tauri 2, React, and FastAPI.
 
 ## Install
 
-Download the installer for your platform from the folder matching your OS in
-[`release/`](release/) (or from the GitHub Releases page):
+Download the installer for your platform:
+
+- **GitHub Releases (CPU, all platforms):**
+  <https://github.com/RajdeepSaiPutta/stethos/releases/tag/v0.1.0>
+- **Hugging Face (CPU + CUDA, full set):**
+  <https://huggingface.co/rajdeepp11/stethos>
 
 | Platform | Installer |
 | --- | --- |
@@ -25,11 +29,13 @@ Download the installer for your platform from the folder matching your OS in
 | Fedora / openSUSE | `Stethos-<version>-1.x86_64.rpm` |
 | Arch / CachyOS | `Stethos-<version>-1-x86_64.pkg.tar.zst` |
 | Any Linux | `install-linux.sh` + AppImage |
+| Linux + NVIDIA GPU | the CUDA set under `cuda/linux/` (Hugging Face) |
 
 Each installer registers Stethos in the application menu / Start menu /
 Launchpad and bundles the inference engine plus the model weights, so there is
 no terminal step and no separate download. See [`release/README.md`](release/README.md)
-for checksums, GPU notes, and uninstall instructions.
+for checksums, GPU notes, and uninstall instructions. The local `release/`
+folders hold the same files on a build machine.
 
 ## Build from source
 

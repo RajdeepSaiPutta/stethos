@@ -86,6 +86,15 @@ jobs:
         working-directory: release/${{ matrix.platform }}
         run: sha256sum -c SHA256SUMS.txt || shasum -a 256 -c SHA256SUMS.txt
 
+      # The publish job merges all three artifact folders into one directory,
+      # so the per-platform checksum and readme files need unique names.
+      - name: Give artifacts unique names
+        shell: bash
+        working-directory: release/${{ matrix.platform }}
+        run: |
+          if [ -f SHA256SUMS.txt ]; then mv SHA256SUMS.txt "SHA256SUMS-${{ matrix.platform }}.txt"; fi
+          if [ -f README.md ]; then mv README.md "README-${{ matrix.platform }}.md"; fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: stethos-${{ matrix.platform }}

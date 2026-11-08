@@ -7,9 +7,10 @@
 | `Stethos-<version>-1-x86_64.pkg.tar.zst` | Arch, CachyOS, Manjaro, EndeavourOS |
 | `Stethos_<version>_amd64.AppImage` | Any distro, no root |
 
-If a CUDA-enabled package is present in this folder it is named the same way —
-only its size differs (~2.5 GB instead of ~460 MB). Check the recorded device in
-the app's status bar.
+These are the **CPU** packages (~460 MB). The CUDA packages for NVIDIA GPUs
+(~3 GB) live in [`../cuda/linux/`](../cuda/linux/) and use the same filenames, so
+install one set or the other. Check the recorded device in the app's status
+bar, or run `curl -s http://127.0.0.1:8765/health`.
 
 Every package installs `/usr/bin/stethos`, the inference engine next to it, the
 icon set under `/usr/share/icons/hicolor/`, and
