@@ -1,129 +1,103 @@
-# Stethos installers
+# stethos installers
 
-Ready-to-run installers for **Linux**, **Windows** and **macOS**. Each one is a
-normal desktop install: double-click it, follow the wizard, and Stethos appears
-in the app drawer / Start menu / Applications folder. No terminal, no Python,
-no separate model download — the inference engine and model weights are inside
-the package.
+ready-to-run installers for **linux**, **windows** and **macos**. each one is a normal desktop install: double-click it, follow the wizard, and stethos appears in the app drawer / start menu / applications folder. no terminal, no python, no separate model download — the inference engine and model weights are inside the package.
 
-## Download
+## download
 
-- **GitHub Releases:** <https://github.com/RajdeepSaiPutta/stethos/releases/tag/v0.1.0>
-  (CPU installers for all three platforms)
-- **Hugging Face mirror:** <https://huggingface.co/rajdeepp11/stethos>
-  (the full set, including the ~3 GB Linux CUDA packages)
+- **github releases (cpu, all platforms):**
+  <https://github.com/RajdeepSaiPutta/stethos/releases/tag/v0.1.0>
+- **hugging face (cpu + cuda linux):**
+  <https://huggingface.co/rajdeepp11/stethos>
 
-The binaries are also in the folders below on a machine that built them.
+the binaries are also in the folders below on a machine that built them.
 
 ```
 release/
-├── linux/            CPU  .deb  .rpm  .AppImage  .pkg.tar.zst  (+ install-linux.sh)
-├── windows/          CPU  .exe (NSIS)  .msi
-├── macos/            CPU  .dmg
+├── linux/            cpu  .deb  .rpm  .AppImage  .pkg.tar.zst  (+ install-linux.sh)
+├── windows/          cpu  .exe (nsis)  .msi
+├── macos/            cpu  .dmg
 └── cuda/
-    └── linux/        CUDA .deb  .rpm  .AppImage  .pkg.tar.zst
+    └── linux/        cuda .deb  .rpm  .AppImage  .pkg.tar.zst
 ```
 
-Every platform folder gets a `SHA256SUMS.txt` next to the installers. Verify
-with:
+every platform folder gets a `SHA256SUMS.txt` next to the installers. verify with:
 
 ```bash
-sha256sum -c SHA256SUMS.txt        # Linux
-shasum -a 256 -c SHA256SUMS.txt    # macOS
-certutil -hashfile <file> SHA256   # Windows
+sha256sum -c SHA256SUMS.txt        # linux
+shasum -a 256 -c SHA256SUMS.txt    # macos
+certutil -hashfile <file> SHA256   # windows
 ```
 
-## Which build?
+## which build?
 
-| Build | Platforms | Size | Notes |
+| build | platforms | size | notes |
 | --- | --- | --- | --- |
-| **CPU** | Linux, Windows, macOS | ~330–500 MB | Runs everywhere. macOS uses Metal (MPS) on Apple silicon automatically. |
-| **CUDA** | Linux x64 | ~2.9–3.1 GB | Runs every model on an NVIDIA GPU. Requires a CUDA 13 capable driver (580 or newer). |
+| **cpu** | linux, windows, macos | ~330–500 mb | runs everywhere. macos uses metal (mps) on apple silicon automatically. |
+| **cuda** | linux x64 | ~2.9–3.1 gb | runs every model on an nvidia gpu. requires a cuda 13 capable driver (580 or newer). |
 
-The CPU and CUDA Linux packages have the same filenames, so install **one or the
-other**, not both. If you do not have an NVIDIA GPU, use the CPU build.
+the cpu and cuda linux packages have the same filenames, so install **one or the other**, not both. if you don't have an nvidia gpu, use the cpu build.
 
-## Install
+## install
 
-### Linux
+### linux
 
-| Distro family | File | Command |
+| distro family | file | command |
 | --- | --- | --- |
-| Debian / Ubuntu / Mint | `Stethos_<version>_amd64.deb` | double-click, or `sudo apt install ./Stethos_*.deb` |
-| Fedora / openSUSE | `Stethos-<version>-1.x86_64.rpm` | double-click, or `sudo dnf install ./Stethos-*.rpm` |
-| Arch / CachyOS / Manjaro | `Stethos-<version>-1-x86_64.pkg.tar.zst` | `sudo pacman -U Stethos-*.pkg.tar.zst` |
-| Any distro, no root | `Stethos_<version>_amd64.AppImage` | `./release/linux/install-linux.sh Stethos_*.AppImage` |
+| debian / ubuntu / mint | `Stethos_<version>_amd64.deb` | double-click, or `sudo apt install ./Stethos_*.deb` |
+| fedora / opensuse | `Stethos-<version>-1.x86_64.rpm` | double-click, or `sudo dnf install ./Stethos-*.rpm` |
+| arch / cachyos / manjaro | `Stethos-<version>-1-x86_64.pkg.tar.zst` | `sudo pacman -U Stethos-*.pkg.tar.zst` |
+| any distro, no root | `Stethos_<version>_amd64.AppImage` | `./release/linux/install-linux.sh Stethos_*.AppImage` |
 
-All four register a desktop entry (`MedicalSoftware;Science;`) so the app shows
-up in the application menu and can be pinned to the dock. The AppImage helper
-installs it per-user under `~/.local` — no administrator password needed.
+all four register a desktop entry (`MedicalSoftware;Science;`) so the app shows up in the application menu and can be pinned to the dock. the appimage helper installs it per-user under `~/.local` — no administrator password needed.
 
-For the CUDA packages, use the same commands from `release/cuda/linux/`.
+for the cuda packages, use the same commands from `release/cuda/linux/`.
 
-### Windows
+### windows
 
-Run `Stethos_<version>_x64-setup.exe` (recommended) or
-`Stethos_<version>_x64_en-US.msi`. The installer creates a Start-menu shortcut
-and an optional desktop shortcut.
+run `Stethos_<version>_x64-setup.exe` (recommended) or `Stethos_<version>_x64_en-US.msi`. the installer creates a start-menu shortcut and an optional desktop shortcut.
 
-### macOS
+### macos
 
-Open `Stethos_<version>_aarch64.dmg` (Apple silicon), drag Stethos into
-**Applications**, then launch it from Launchpad. The build is ad-hoc signed; on
-first launch use **System Settings → Privacy & Security → Open Anyway** if
-Gatekeeper asks.
+open `Stethos_<version>_aarch64.dmg` (apple silicon), drag stethos into **applications**, then launch it from launchpad. the build is ad-hoc signed; on first launch use **system settings → privacy & security → open anyway** if gatekeeper asks.
 
-## GPU acceleration
+## gpu acceleration
 
-Stethos uses the GPU automatically when one is available and falls back to CPU
-otherwise. The installer bundles the inference engine that matches its build:
+stethos uses the gpu automatically when one is available and falls back to cpu otherwise. the installer bundles the inference engine that matches its build:
 
-- **CUDA build** (Linux x64): ships the CUDA runtime and NVIDIA kernels, so
-  `/health` reports `"device": "cuda"`. These packages are ~2.9–3.1 GB.
-- **CPU build** (Linux, Windows, macOS): ~330–500 MB. On Apple silicon PyTorch
-  enables Metal (MPS) automatically; elsewhere it runs on CPU.
+- **cuda build** (linux x64): ships the cuda runtime and nvidia kernels, so `/health` reports `"device": "cuda"`. these packages are ~2.9–3.1 gb.
+- **cpu build** (linux, windows, macos): ~330–500 mb. on apple silicon pytorch enables metal (mps) automatically; elsewhere it runs on cpu.
 
-To check what an installed build picked, open the app and look at the status
-bar (bottom right: `GPU name · memory` or `cpu`), or run:
+to check what an installed build picked, open the app and look at the status bar (bottom right: `gpu name · memory` or `cpu`), or run:
 
 ```bash
 curl -s http://127.0.0.1:8765/health
 ```
 
-## Rebuilding
+## rebuilding
 
-From a clean checkout:
+from a clean checkout:
 
 ```bash
 npm ci
-node scripts/build-installers.mjs                  # CPU build, host platform
+node scripts/build-installers.mjs                  # cpu build, host platform
 node scripts/build-installers.mjs --no-sidecar     # shell-only, fast
-PYTHON=/path/to/cuda/python node scripts/build-installers.mjs   # CUDA build
+PYTHON=/path/to/cuda/python node scripts/build-installers.mjs   # cuda build (local only)
 ```
 
-The script builds the web bundle, runs PyInstaller for the sidecar (unless it is
-already in `python/dist/`), runs `tauri build` for the host platform, and copies
-every artifact plus `SHA256SUMS.txt` into `release/<platform>/`.
+the script builds the web bundle, runs pyinstaller for the sidecar (unless it is already in `python/dist/`), runs `tauri build` for the host platform, and copies every artifact plus `SHA256SUMS.txt` into `release/<platform>/`.
 
-The Arch package is built from the same artifacts:
+the arch package is built from the same artifacts:
 
 ```bash
 ./scripts/build-arch-package.sh
 ```
 
-### Why the binaries are not committed to git
+### why the binaries are not committed to git
 
-GitHub rejects tracked files over 100 MB and the CUDA installers are ~3 GB, so
-installer binaries are excluded from the repository (see `.gitignore`). The CPU
-set is produced by `.github/workflows/build-installers.yml` and attached to the
-GitHub **Releases** page, which allows assets up to 2 GB each. The full set
-(CPU + CUDA) is mirrored to Hugging Face, which allows larger files. The local
-`release/` folders on a build machine still contain the real files.
+github rejects tracked files over 100 mb and the cuda installers are ~3 gb, so installer binaries are excluded from the repository (see `.gitignore`). the cpu set is produced by `.github/workflows/build-installers.yml` and attached to the github **releases** page, which allows assets up to 2 gb each. the full set (cpu + cuda linux) is mirrored to hugging face, which allows larger files. the local `release/` folders on a build machine still contain the real files.
 
-## Platform notes
+## platform notes
 
-- **Linux runtime**: `libwebkit2gtk-4.1`, `libgtk-3-0` (declared as deb
-  dependencies; the RPM and Arch packages use the equivalent names).
-- **macOS**: 11.0 or newer, Apple silicon and Intel both supported.
-- **Windows**: Windows 10/11 x64. The NSIS installer installs per-user, so it
-  does not need an administrator account.
+- **linux runtime**: `libwebkit2gtk-4.1`, `libgtk-3-0` (declared as deb dependencies; the rpm and arch packages use the equivalent names).
+- **macos**: 11.0 or newer, apple silicon and intel both supported.
+- **windows**: windows 10/11 x64. the nsis installer installs per-user, so it does not need an administrator account.

@@ -1,19 +1,15 @@
-# Windows installers
+# windows installers — cpu
 
-| File | Notes |
+| file | notes |
 | --- | --- |
-| `Stethos_<version>_x64-setup.exe` | NSIS installer, per-user, recommended |
-| `Stethos_<version>_x64_en-US.msi` | MSI for managed / group-policy installs |
+| `Stethos_<version>_x64-setup.exe` | nsis installer, per-user, recommended |
+| `Stethos_<version>_x64_en-US.msi` | msi for managed / group-policy installs |
 
-Double-click the installer and follow the wizard. It creates a Start-menu entry
-(with the Stethos logo) and an optional desktop shortcut, so the app is always
-launchable without a terminal.
+double-click the installer and follow the wizard. it creates a start-menu entry (with the stethos logo) and an optional desktop shortcut, so the app is always launchable without a terminal.
 
-The installer bundles the Python inference engine and the model weights. A
-CUDA-enabled build reports `"device": "cuda"` on `http://127.0.0.1:8765/health`
-and uses the GPU automatically; otherwise inference runs on the CPU.
+the installer bundles the python inference engine and the model weights. a cuda-enabled build would report `"device": "cuda"` on `http://127.0.0.1:8765/health` and use the gpu automatically; otherwise inference runs on the cpu. (cuda windows builds don't exist yet — the one-file pyinstaller/nsis pipeline can't handle 3 gb binaries.)
 
-Verify the download before installing:
+verify the download before installing:
 
 ```powershell
 Get-FileHash .\Stethos_0.1.0_x64-setup.exe -Algorithm SHA256

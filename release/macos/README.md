@@ -1,22 +1,15 @@
-# macOS installers
+# macos installers — cpu
 
-| File | Notes |
+| file | notes |
 | --- | --- |
-| `Stethos_<version>_aarch64.dmg` | Apple silicon (M1/M2/M3/M4) |
-| `Stethos_<version>_aarch64.app.zip` | Raw `.app` bundle |
+| `Stethos_<version>_aarch64.dmg` | apple silicon (m1/m2/m3/m4) |
+| `Stethos_<version>_aarch64.app.zip` | raw `.app` bundle |
 
-The default CI build targets Apple silicon. An Intel (`x64`) DMG uses the same
-workflow on an Intel runner.
+open the `.dmg`, drag **stethos** into **applications**, and launch it from launchpad or spotlight. the bundle registers itself with launch services, so it shows up in applications immediately.
 
-Open the `.dmg`, drag **Stethos** into **Applications**, and launch it from
-Launchpad or Spotlight. The bundle registers itself with Launch Services, so it
-shows up in Applications immediately.
+the dmg is ad-hoc signed. if gatekeeper blocks the first launch, open **system settings → privacy & security** and choose **open anyway** once.
 
-The DMG is ad-hoc signed. If Gatekeeper blocks the first launch, open
-**System Settings → Privacy & Security** and choose **Open Anyway** once.
-
-The bundled inference engine uses Metal (MPS) on Apple silicon and falls back to
-the CPU on Intel.
+the bundled inference engine uses metal (mps) on apple silicon and falls back to the cpu on intel.
 
 ```bash
 shasum -a 256 -c SHA256SUMS.txt
