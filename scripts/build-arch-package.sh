@@ -15,7 +15,7 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "${STAGE}"' EXIT
 
 BIN="${ROOT}/src-tauri/target/release/stethos"
-SIDECAR="${SIDECAR:-${ROOT}/python/dist/stethos-sidecar}"
+SIDECAR="${SIDECAR:-${ROOT}/python/dist-cpu/stethos-sidecar}"
 ICONS="${ROOT}/src-tauri/icons"
 OUT_DIR="${OUT_DIR:-${ROOT}/release/linux}"
 

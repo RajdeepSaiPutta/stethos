@@ -82,13 +82,21 @@ impl SidecarManager {
         let sidecar_path = Self::sidecar_path(app)?;
         tracing::info!("Starting sidecar at: {:?}", sidecar_path);
 
-        // Make executable on Unix
+        // Make executable on Unix - skip if read-only filesystem (e.g., AppImage)
         #[cfg(not(target_os = "windows"))]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&sidecar_path)?.permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&sidecar_path, perms)?;
+            if let Ok(metadata) = std::fs::metadata(&sidecar_path) {
+                let mut perms = metadata.permissions();
+                if perms.mode() & 0o111 == 0 {
+                    // Not executable, try to make it executable
+                    perms.set_mode(0o755);
+                    if let Err(e) = std::fs::set_permissions(&sidecar_path, perms) {
+                        tracing::warn!("Could not set executable bit on sidecar (read-only fs?): {}", e);
+                        // Continue anyway - the file might already be executable from the bundle
+                    }
+                }
+            }
         }
 
         let mut child = AsyncCommand::new(&sidecar_path)

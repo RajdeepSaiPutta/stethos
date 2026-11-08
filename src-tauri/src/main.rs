@@ -45,7 +45,17 @@ async fn run_inference(
     input_path: String,
     options: Option<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
+    // Wait for sidecar to be healthy before making the request
     let client = reqwest::Client::new();
+    for _ in 0..30 {
+        if let Ok(resp) = client.get("http://127.0.0.1:8765/health").send().await {
+            if resp.status().is_success() {
+                break;
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    }
+
     let resp = client
         .post("http://127.0.0.1:8765/inference")
         .json(&serde_json::json!({
@@ -56,7 +66,7 @@ async fn run_inference(
         .timeout(std::time::Duration::from_secs(180))
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to connect to sidecar: {}", e))?;
     let json: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
     Ok(json)
 }
@@ -65,14 +75,24 @@ async fn run_inference(
 async fn run_fusion_inference(
     inputs: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
+    // Wait for sidecar to be healthy before making the request
     let client = reqwest::Client::new();
+    for _ in 0..30 {
+        if let Ok(resp) = client.get("http://127.0.0.1:8765/health").send().await {
+            if resp.status().is_success() {
+                break;
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    }
+
     let resp = client
         .post("http://127.0.0.1:8765/fusion")
         .json(&inputs)
         .timeout(std::time::Duration::from_secs(180))
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to connect to sidecar: {}", e))?;
     let json: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
     Ok(json)
 }
@@ -187,8 +207,11 @@ fn main() {
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
+                tracing::info!("Setup hook: starting sidecar...");
                 if let Err(e) = SidecarManager::start(&handle).await {
                     tracing::error!("Failed to start sidecar: {}", e);
+                } else {
+                    tracing::info!("Sidecar started successfully");
                 }
             });
             Ok(())

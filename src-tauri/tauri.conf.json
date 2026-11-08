@@ -31,7 +31,7 @@
     "active": true,
     "targets": "all",
     "publisher": "Stethos",
-    "copyright": "Copyright © 2026 Stethos",
+    "copyright": "Copyright \u00a9 2026 Stethos",
     "category": "Medical",
     "shortDescription": "Local respiratory diagnostics workstation",
     "longDescription": "Stethos classifies breath sounds, chest X-rays and spirometry on-device, then fuses the findings into a single respiratory risk assessment. Nothing leaves the machine.",
@@ -56,18 +56,33 @@
     "macOS": {
       "minimumSystemVersion": "11.0",
       "dmg": {
-        "windowSize": { "width": 660, "height": 400 },
-        "appPosition": { "x": 180, "y": 170 },
-        "applicationFolderPosition": { "x": 480, "y": 170 }
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
       }
     },
     "windows": {
       "nsis": {
         "installerIcon": "icons/icon.ico",
         "uninstallerIcon": "icons/icon.ico",
-        "languages": ["English"],
+        "languages": [
+          "English"
+        ],
         "installMode": "currentUser"
       }
-    }
+    },
+    "resources": [
+      "binaries/stethos-sidecar",
+      "binaries/stethos-sidecar-x86_64-unknown-linux-gnu"
+    ]
   }
 }
