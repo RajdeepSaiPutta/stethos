@@ -1,64 +1,50 @@
-# Stethos
+# stethos
 
-Stethos is a desktop app for respiratory diagnostics. It takes breath sounds, a
-chest X-ray, or spirometry data, classifies each one, and fuses the separate
-findings into a single risk assessment with a per-modality breakdown. Reports
-export as PDF, FHIR, DICOM-SR, or JSON.
+a desktop app for respiratory diagnostics. drop in a breath recording, chest x-ray, or spirometry file and it classifies each one, then fuses the findings into a single risk assessment with a per-modality breakdown. reports export as pdf, fhir, dicom-sr, or json.
 
-All inference runs locally in a Python sidecar. It uses CUDA when a GPU is
-present and falls back to CPU otherwise; nothing ever leaves the machine. Where
-no trained checkpoint exists yet, the models fall back to locally-initialized
-weights so the whole pipeline stays runnable end to end.
+all inference runs locally in a python sidecar. uses cuda when a gpu is present, falls back to cpu otherwise — nothing ever leaves your machine. where no trained checkpoint exists yet, models fall back to locally-initialized weights so the whole pipeline stays runnable end-to-end.
 
-Built with Tauri 2, React, and FastAPI.
+built with tauri 2, react, and fastapi.
 
-## Install
+## install
 
-Download the installer for your platform:
+download the installer for your platform:
 
-- **GitHub Releases (CPU, all platforms):**
-  <https://github.com/RajdeepSaiPutta/stethos/releases/tag/v0.1.0>
-- **Hugging Face (CPU + CUDA, full set):**
-  <https://huggingface.co/rajdeepp11/stethos>
+- **github releases (cpu, all platforms):** https://github.com/RajdeepSaiPutta/stethos/releases/tag/v0.1.0
+- **hugging face (cpu + cuda, full set):** https://huggingface.co/rajdeepp11/stethos
 
-| Platform | Installer |
-| --- | --- |
-| Windows | `Stethos_<version>_x64-setup.exe` |
-| macOS | `Stethos_<version>_aarch64.dmg` |
-| Debian / Ubuntu | `Stethos_<version>_amd64.deb` |
-| Fedora / openSUSE | `Stethos-<version>-1.x86_64.rpm` |
-| Arch / CachyOS | `Stethos-<version>-1-x86_64.pkg.tar.zst` |
-| Any Linux | `install-linux.sh` + AppImage |
-| Linux + NVIDIA GPU | the CUDA set under `cuda/linux/` (Hugging Face) |
+| platform | installer |
+|----------|-----------|
+| windows | `Stethos_<version>_x64-setup.exe` |
+| macos (apple silicon) | `Stethos_<version>_aarch64.dmg` |
+| debian / ubuntu | `Stethos_<version>_amd64.deb` |
+| fedora / opensuse | `Stethos-<version>-1.x86_64.rpm` |
+| arch / cachyos | `Stethos-<version>-1-x86_64.pkg.tar.zst` |
+| any linux | `install-linux.sh` + AppImage |
+| linux + nvidia gpu | the cuda set under `cuda/linux/` (hugging face) |
 
-Each installer registers Stethos in the application menu / Start menu /
-Launchpad and bundles the inference engine plus the model weights, so there is
-no terminal step and no separate download. See [`release/README.md`](release/README.md)
-for checksums, GPU notes, and uninstall instructions. The local `release/`
-folders hold the same files on a build machine.
+each installer registers stethos in your app menu / start menu / launchpad and bundles the inference engine + model weights — no terminal step, no separate download. see `release/README.md` for checksums, gpu notes, and uninstall instructions.
 
-## Build from source
+## run from source
 
 ```bash
 npm ci
-node scripts/build-installers.mjs                # installer for this OS
+node scripts/build-installers.mjs                # build installer for this os
 ```
 
-Or run it in development:
+or dev mode:
 
 ```bash
-# terminal 1 - inference sidecar
+# terminal 1 — inference sidecar
 cd python && python -m uvicorn api.main:app --port 8765
 
-# terminal 2 - desktop shell
+# terminal 2 — desktop shell
 npm run tauri:dev
 ```
 
-### GPU acceleration
+### gpu acceleration
 
-The packaged sidecar detects CUDA at runtime. A CPU-only PyTorch wheel still
-runs everything, but reports `"device": "cpu"`. To produce a CUDA-bundled
-installer, build the sidecar with a CUDA torch install:
+the packaged sidecar detects cuda at runtime. cpu-only pytorch wheel runs everything but reports `"device": "cpu"`. to produce a cuda-bundled installer, build the sidecar with a cuda torch install:
 
 ```bash
 python -m pip install torch torchvision torchaudio \
@@ -66,19 +52,15 @@ python -m pip install torch torchvision torchaudio \
 node scripts/build-installers.mjs
 ```
 
-`curl -s http://127.0.0.1:8765/health` reports the device the shipped build
-picked.
+`curl -s http://127.0.0.1:8765/health` reports the device the shipped build picked.
 
-## Brand assets
+## brand assets
 
-All logos, favicons, PWA icons, and OS icons are generated from one source
-image:
+all logos, favicons, pwa icons, and os icons generated from one source image:
 
 ```bash
 python scripts/generate-brand-assets.py "/path/to/stethos logo.png"
 npx tauri icon src-tauri/brand/source.png
-```
-
 ---
 
-Research tool, not a medical device — confirm findings with a clinician.
+research tool, not a medical device — confirm findings with a clinician.
