@@ -30,7 +30,7 @@ jobs:
             label: Windows x64
             platform: windows
             bundles: nsis,msi
-          - os: macos-14
+          - os: macos-latest
             label: macOS arm64
             platform: macos
             bundles: app,dmg
