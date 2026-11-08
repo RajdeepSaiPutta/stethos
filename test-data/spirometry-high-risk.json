@@ -1,0 +1,71 @@
+{
+  "synth_severe_obstructive_0000": {
+    "visits": [
+      {
+        "date": "2024-01-15",
+        "params": {
+          "FVC": 2.8,
+          "FEV1": 0.84,
+          "FEV1_FVC": 0.3,
+          "FEF25_75": 0.4,
+          "PEF": 3.5,
+          "FIVC": 2.8,
+          "FIF50": 2.0,
+          "MVV": 40,
+          "TLC": 7.5,
+          "RV": 4.5,
+          "DLCO": 15
+        },
+        "pattern": 1,
+        "age": 68,
+        "sex": "M"
+      }
+    ]
+  },
+  "synth_severe_restrictive_0000": {
+    "visits": [
+      {
+        "date": "2024-01-15",
+        "params": {
+          "FVC": 1.8,
+          "FEV1": 1.5,
+          "FEV1_FVC": 0.83,
+          "FEF25_75": 2.0,
+          "PEF": 4.5,
+          "FIVC": 1.8,
+          "FIF50": 2.5,
+          "MVV": 50,
+          "TLC": 3.2,
+          "RV": 0.8,
+          "DLCO": 8
+        },
+        "pattern": 2,
+        "age": 62,
+        "sex": "F"
+      }
+    ]
+  },
+  "synth_severe_mixed_0000": {
+    "visits": [
+      {
+        "date": "2024-01-15",
+        "params": {
+          "FVC": 2.2,
+          "FEV1": 0.88,
+          "FEV1_FVC": 0.4,
+          "FEF25_75": 0.5,
+          "PEF": 3.0,
+          "FIVC": 2.2,
+          "FIF50": 1.8,
+          "MVV": 35,
+          "TLC": 4.5,
+          "RV": 3.2,
+          "DLCO": 10
+        },
+        "pattern": 3,
+        "age": 70,
+        "sex": "M"
+      }
+    ]
+  }
+}
