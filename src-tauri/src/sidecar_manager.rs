@@ -23,14 +23,27 @@ impl SidecarManager {
             .resource_dir()
             .map_err(|e| anyhow::anyhow!("Failed to get resource dir: {}", e))?;
 
-        let candidates = vec![
-            // Production: bundled via externalBin
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or_default();
+
+        let mut candidates = vec![
+            // Production: bundled as a Tauri resource at resources/binaries/
             resource_dir.join("binaries").join(Self::sidecar_name()),
+            // Production: bundled as a plain resource at the resource root
+            resource_dir.join(Self::sidecar_name()),
+            // Windows/Linux: copied next to the app binary
+            exe_dir.join(Self::sidecar_name()),
+            // macOS .app: Contents/MacOS/stethos -> Contents/Resources/binaries/
+            exe_dir.join("..").join("Resources").join("binaries").join(Self::sidecar_name()),
+            exe_dir.join("..").join("Resources").join(Self::sidecar_name()),
             // Dev fallback
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("binaries")
                 .join(Self::sidecar_name()),
         ];
+        candidates.dedup();
 
         for path in &candidates {
             if path.exists() {
@@ -108,8 +121,9 @@ impl SidecarManager {
         }
 
         // Wait for sidecar to be ready. Model loading happens during startup
-        // and can take a while on slow disk / cold cache — allow 30s.
-        for _ in 0..60 {
+        // and can take a while on slow disk / cold cache — the bundled
+        // one-file build unpacks PyTorch first, so allow 120s.
+        for _ in 0..240 {
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
             if let Ok(resp) = reqwest::get(format!("http://127.0.0.1:{}/health", SIDECAR_PORT)).await {
                 if resp.status().is_success() {
@@ -117,7 +131,7 @@ impl SidecarManager {
                 }
             }
         }
-        Err(anyhow::anyhow!("Sidecar failed to start within 30 seconds"))
+        Err(anyhow::anyhow!("Sidecar failed to start within 120 seconds"))
     }
 
     /// True if a sidecar answers /health on the port within `tries` * 100ms.

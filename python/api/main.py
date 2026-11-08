@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
+import sys
 import torch
 import uvicorn
 import logging
@@ -71,9 +72,30 @@ def _pick_device(override: Optional[str] = None) -> torch.device:
 DEVICE = _pick_device(DEVICE_OVERRIDE)
 logger.info(f"Using device: {DEVICE}")
 
-# Model paths (relative to app data dir)
-MODEL_DIR = Path(__file__).parent.parent / "models"
-MODEL_DIR.mkdir(exist_ok=True)
+# Model paths. When frozen by PyInstaller the weights are unpacked next to the
+# bundled entry point inside ``sys._MEIPASS``; in a source checkout they live in
+# ``python/models``. Probe both instead of trusting ``__file__``'s shape, which
+# differs between one-file and one-dir bundles.
+def _resolve_model_dir() -> Path:
+    candidates = []
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            candidates.append(Path(meipass) / "models")
+        candidates.append(Path(sys.executable).resolve().parent / "models")
+    candidates.append(Path(__file__).resolve().parent.parent / "models")
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+    return candidates[-1]
+
+
+MODEL_DIR = _resolve_model_dir()
+try:
+    MODEL_DIR.mkdir(exist_ok=True)
+except OSError:
+    # Installed bundles live in read-only locations (e.g. /usr/lib/stethos).
+    pass
 
 # Register all plugins
 register_breath_plugin(str(MODEL_DIR / "breath_cnn.pt") if (MODEL_DIR / "breath_cnn.pt").exists() else None)

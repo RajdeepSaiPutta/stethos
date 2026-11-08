@@ -16,3 +16,17 @@ python/dist/
 python/data/
 python/models_test/
 src-tauri/binaries/
+
+# installer binaries are large (100 MB - 2.5 GB); CI attaches them to Releases
+release/**/*.deb
+release/**/*.rpm
+release/**/*.AppImage
+release/**/*.pkg.tar.zst
+release/**/*.exe
+release/**/*.msi
+release/**/*.dmg
+release/**/*.app
+release/**/*.zip
+release/**/SHA256SUMS.txt
+python/build-gpu/
+python/dist-gpu/

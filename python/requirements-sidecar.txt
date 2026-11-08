@@ -1,0 +1,34 @@
+# Build-time dependencies for the bundled Python sidecar.
+# Kept out of `pyproject.toml` because the desktop app never imports these
+# in-process; they are only needed by PyInstaller.
+#
+# Install the CPU-only torch wheel so the bundle does not carry ~3 GB of CUDA
+# libraries that most end users cannot use:
+#
+#   python -m venv .venv-sidecar
+#   .venv-sidecar/bin/pip install -r requirements-sidecar.txt \
+#       --extra-index-url https://download.pytorch.org/whl/cpu
+#
+torch
+torchvision
+torchaudio
+numpy
+scipy
+scikit-image
+scikit-learn
+opencv-python-headless
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+pillow
+reportlab
+fhir.resources
+jinja2
+pyyaml
+python-dotenv
+pydicom
+pandas
+packaging
+pyinstaller

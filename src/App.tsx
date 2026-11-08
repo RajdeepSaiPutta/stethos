@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen, Event } from '@tauri-apps/api/event'
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog'
 import {
-  Mic2, Image, Activity, FileText, Stethoscope,
+  Mic2, Image, Activity, FileText,
   Layers, Settings2, PanelLeftOpen, PanelLeftClose, History,
   Users,
 } from 'lucide-react'
@@ -450,7 +450,12 @@ export function App() {
       <div className="h-screen flex bg-[var(--bg)] text-[var(--text)] overflow-hidden">
         <main className="flex-1 flex flex-col items-center justify-center p-8">
           <div className="max-w-md w-full text-center animate-fade-in">
-            <Stethoscope className="w-16 h-16 text-[var(--accent)] mx-auto mb-6" strokeWidth={2.2} />
+            <img
+              src="/logo-light.png"
+              alt="Stethos"
+              className="w-20 h-20 mx-auto mb-5 opacity-95"
+              draggable={false}
+            />
             <h1 className="text-3xl font-semibold text-white mb-2">Welcome to Stethos</h1>
             <p className="text-[var(--text-muted)] mb-8">
               Local ML diagnostics for respiratory analysis. Start by creating or selecting a patient.
@@ -505,14 +510,14 @@ export function App() {
         <div className="h-10 flex items-center justify-between px-2.5 pr-1" style={{ borderBottom: '1px solid var(--border-soft)' }}>
           {sidebarOpen ? (
             <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-              <Stethoscope className="w-3.5 h-3.5 text-[var(--accent)] flex-shrink-0" strokeWidth={2.2} />
+              <img src="/logo-light.png" alt="" className="w-5 h-5 flex-shrink-0" draggable={false} />
               <div className="min-w-0">
                 <div className="text-[13px] font-semibold leading-tight">Stethos</div>
                 <div className="text-[8.5px] uppercase tracking-[0.14em] text-[var(--text-faint)] leading-tight truncate">Local ML Diagnostics</div>
               </div>
             </div>
           ) : (
-            <Stethoscope className="w-4 h-4 text-[var(--accent)] mx-auto" strokeWidth={2.2} />
+            <img src="/logo-light.png" alt="Stethos" className="w-6 h-6 mx-auto" draggable={false} />
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
