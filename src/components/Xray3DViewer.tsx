@@ -4,17 +4,18 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import {
   RotateCcw, Play, Pause, Camera, Box, Grid3x3, CircleDot,
   Contrast, Sun, Maximize2, Minimize2, Crosshair, Ruler,
-  HelpCircle, Eye, Layout, Link, Navigation, Activity
+  HelpCircle, Eye, Layout, Link, Navigation, Activity, Heart
 } from 'lucide-react'
 
 interface Xray3DViewerProps {
   src: string
   height?: number
+  maskSrc?: string
   segmentationOverlay?: string
   onMeasurement?: (m: { type: string; value: number; unit: string }) => void
 }
 
-type RenderMode = 'surface' | 'wireframe' | 'points' | 'volume'
+type RenderMode = 'surface' | 'wireframe' | 'points' | 'volume' | 'lungs'
 type Colormap = 'radiograph' | 'bone' | 'thermal' | 'hot-iron' | 'mammography' | 'inverted'
 type ViewMode = 'quad' | '3d' | 'axial' | 'sagittal' | 'coronal'
 
@@ -130,6 +131,7 @@ interface Viewport {
 export function Xray3DViewer({ 
   src, 
   height = 600, 
+  maskSrc,
   onMeasurement 
 }: Xray3DViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -499,6 +501,161 @@ export function Xray3DViewer({
     }
     scene.add(volumeGroup)
 
+    // ── 3D Lung meshes from segmentation mask ────────────────────────────────
+    // Two lobe meshes (left/right lung) with alpha-mapped edges.
+    let lungMeshLeft: THREE.Mesh | null = null
+
+    const buildLungMeshes = async (maskUrl: string) => {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const i = new Image()
+        i.onload = () => resolve(i)
+        i.onerror = reject
+        i.src = maskUrl
+      })
+      const canvas = document.createElement('canvas')
+      canvas.width = GRID
+      canvas.height = GRID
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+      ctx.drawImage(img, 0, 0, GRID, GRID)
+      const data = ctx.getImageData(0, 0, GRID, GRID).data
+      // data is RGBA; class id in R channel (0=bg, 1=left, 2=right, 3=heart, 4=trachea)
+      const mask = new Uint8Array(GRID * GRID)
+      for (let i = 0; i < GRID * GRID; i++) mask[i] = data[i * 4]
+
+      // Chamfer distance transform (two-pass) for each lung class
+      const computeDT = (cls: number): Float32Array => {
+        const dt = new Float32Array(GRID * GRID)
+        const INF = 1e9
+        // init
+        for (let i = 0; i < GRID * GRID; i++) dt[i] = mask[i] === cls ? 0 : INF
+        // forward pass
+        for (let y = 0; y < GRID; y++) {
+          for (let x = 0; x < GRID; x++) {
+            const idx = y * GRID + x
+            if (x > 0) dt[idx] = Math.min(dt[idx], dt[idx - 1] + 1)
+            if (y > 0) dt[idx] = Math.min(dt[idx], dt[idx - GRID] + 1)
+            if (x > 0 && y > 0) dt[idx] = Math.min(dt[idx], dt[idx - GRID - 1] + 1.414)
+            if (x < GRID - 1 && y > 0) dt[idx] = Math.min(dt[idx], dt[idx - GRID + 1] + 1.414)
+          }
+        }
+        // backward pass
+        for (let y = GRID - 1; y >= 0; y--) {
+          for (let x = GRID - 1; x >= 0; x--) {
+            const idx = y * GRID + x
+            if (x < GRID - 1) dt[idx] = Math.min(dt[idx], dt[idx + 1] + 1)
+            if (y < GRID - 1) dt[idx] = Math.min(dt[idx], dt[idx + GRID] + 1)
+            if (x < GRID - 1 && y < GRID - 1) dt[idx] = Math.min(dt[idx], dt[idx + GRID + 1] + 1.414)
+            if (x > 0 && y < GRID - 1) dt[idx] = Math.min(dt[idx], dt[idx + GRID - 1] + 1.414)
+          }
+        }
+        return dt
+      }
+
+      const dtL = computeDT(1)
+      const dtR = computeDT(2)
+      // Max distance per lung
+      let maxL = 0, maxR = 0
+      for (let i = 0; i < GRID * GRID; i++) {
+        if (dtL[i] < 1e8 && dtL[i] > maxL) maxL = dtL[i]
+        if (dtR[i] < 1e8 && dtR[i] > maxR) maxR = dtR[i]
+      }
+
+      // Build bulge heightfield: h = sqrt(max(0, 1 - (1 - d/max)^2)) = 0 at edge, 1 at centre
+      const bulgeL = new Float32Array(GRID * GRID)
+      const bulgeR = new Float32Array(GRID * GRID)
+      for (let i = 0; i < GRID * GRID; i++) {
+        if (dtL[i] < 1e8 && maxL > 0) {
+          const t = dtL[i] / maxL
+          bulgeL[i] = Math.sqrt(Math.max(0, 1 - (1 - t) * (1 - t)))
+        }
+        if (dtR[i] < 1e8 && maxR > 0) {
+          const t = dtR[i] / maxR
+          bulgeR[i] = Math.sqrt(Math.max(0, 1 - (1 - t) * (1 - t)))
+        }
+      }
+
+      // Alpha mask texture: 255 on lungs, 0 elsewhere
+      const alphaCanvas = document.createElement('canvas')
+      alphaCanvas.width = GRID
+      alphaCanvas.height = GRID
+      const alphaCtx = alphaCanvas.getContext('2d', { willReadFrequently: true })!
+      const alphaImg = alphaCtx.createImageData(GRID, GRID)
+      for (let i = 0; i < GRID * GRID; i++) {
+        const isLung = mask[i] === 1 || mask[i] === 2
+        alphaImg.data[i * 4] = 255
+        alphaImg.data[i * 4 + 1] = 255
+        alphaImg.data[i * 4 + 2] = 255
+        alphaImg.data[i * 4 + 3] = isLung ? 255 : 0
+      }
+      alphaCtx.putImageData(alphaImg, 0, 0)
+      const alphaTex = new THREE.CanvasTexture(alphaCanvas)
+      alphaTex.minFilter = THREE.LinearFilter
+      alphaTex.magFilter = THREE.LinearFilter
+
+      // Single shared geometry (GRID-1 segments) with two height fields baked in
+      const geom = new THREE.PlaneGeometry(2, 2, GRID - 1, GRID - 1)
+      geom.rotateX(-Math.PI / 2) // horizontal XZ plane
+      const pos = geom.attributes.position as THREE.BufferAttribute
+
+      // Lung material: soft pink/rose, semi-transparent, with alpha test from mask
+      const lungMat = new THREE.MeshStandardMaterial({
+        color: 0xe08d8d,
+        roughness: 0.55,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.7,
+        alphaMap: alphaTex,
+        alphaTest: 0.5,
+        side: THREE.DoubleSide,
+        depthWrite: true,
+      })
+      // wire overlay
+      const lungWireMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.35,
+        alphaMap: alphaTex,
+        alphaTest: 0.5,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      })
+
+      // Left lung mesh (front + back via vertex offset in shader? simpler: two meshes with opposite normals)
+      // We'll create one mesh with combined bulge and rely on double side + opacity
+      const posArr = pos.array
+      for (let i = 0; i < pos.count; i++) {
+        const l = bulgeL[i] * depth * 0.8
+        const r = bulgeR[i] * depth * 0.8
+        const h = Math.max(l, r) * 1.6 // scale
+        posArr[i * 3 + 1] = h - depth * 0.8
+      }
+      pos.needsUpdate = true
+      geom.computeVertexNormals()
+
+      lungMeshLeft = new THREE.Mesh(geom, lungMat)
+      lungMeshLeft.layers.set(LAYER.VOLUME)
+      lungMeshLeft.visible = false
+      scene.add(lungMeshLeft)
+
+      const wireMesh = new THREE.Mesh(geom, lungWireMat)
+      wireMesh.layers.set(LAYER.VOLUME)
+      wireMesh.visible = false
+      scene.add(wireMesh)
+      // stash wire on left for visibility control
+      ;(lungMeshLeft as any).wire = wireMesh
+
+      // Store bulge arrays for dynamic updates when depth/params change
+      ;(lungMeshLeft as any).bulgeL = bulgeL
+      ;(lungMeshLeft as any).bulgeR = bulgeR
+      ;(lungMeshLeft as any).alphaTex = alphaTex
+    }
+
+    // Kick off load if maskSrc provided
+    if (maskSrc) {
+      buildLungMeshes(maskSrc).catch(e => console.warn('[Xray3DViewer] lung mesh load failed:', e))
+    }
+
     const paintVolumeTexture = () => {
       if (!volumeCtx || !volumeRef.current) return
       const data = volumeRef.current
@@ -685,6 +842,13 @@ export function Xray3DViewer({
           }
           if (volumePoints) {
             volumePoints.visible = volumeVis && mode === 'points'
+          }
+          // Lung meshes
+          if (lungMeshLeft) {
+            const lungVis = volumeVis && mode === 'lungs'
+            lungMeshLeft.visible = lungVis
+            const wire = (lungMeshLeft as any).wire as THREE.Mesh | undefined
+            if (wire) wire.visible = lungVis
           }
           crosshairGroup.visible = showCrosshair && (viewMode === '3d' || viewMode === 'quad')
           
@@ -958,7 +1122,7 @@ export function Xray3DViewer({
         {/* Render Mode */}
         <div className="flex" style={{ border: '1px solid var(--border)', borderRadius: 3 }}>
           {([
-            ['surface', Box], ['wireframe', Grid3x3], ['points', CircleDot], ['volume', Maximize2],
+            ['surface', Box], ['wireframe', Grid3x3], ['points', CircleDot], ['volume', Maximize2], ['lungs', Heart],
           ] as Array<[RenderMode, React.ComponentType<{ className?: string }>]>).map(([m, Icon]) => (
             <button key={m} onClick={() => setMode(m)}
               className={`px-2 py-1 flex items-center gap-1 mono text-[10px] ${mode === m ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-faint)]'}`}

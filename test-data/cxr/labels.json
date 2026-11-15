@@ -1,0 +1,276 @@
+{
+  "normal_01.png": {
+    "clinical_labels": [
+      "No Finding"
+    ],
+    "synthesis_type": "normal",
+    "pathology": "normal"
+  },
+  "normal_02.png": {
+    "clinical_labels": [
+      "No Finding"
+    ],
+    "synthesis_type": "normal",
+    "pathology": "normal"
+  },
+  "consolidation_right_01.png": {
+    "clinical_labels": [
+      "Consolidation",
+      "Infiltration"
+    ],
+    "synthesis_type": "consolidation_right",
+    "pathology": "consolidation_right",
+    "location": "right",
+    "severity": "moderate"
+  },
+  "consolidation_right_02.png": {
+    "clinical_labels": [
+      "Consolidation",
+      "Infiltration"
+    ],
+    "synthesis_type": "consolidation_right",
+    "pathology": "consolidation_right",
+    "location": "right",
+    "severity": "moderate"
+  },
+  "consolidation_left_01.png": {
+    "clinical_labels": [
+      "Consolidation",
+      "Infiltration"
+    ],
+    "synthesis_type": "consolidation_left",
+    "pathology": "consolidation_left",
+    "location": "left",
+    "severity": "moderate"
+  },
+  "consolidation_left_02.png": {
+    "clinical_labels": [
+      "Consolidation",
+      "Infiltration"
+    ],
+    "synthesis_type": "consolidation_left",
+    "pathology": "consolidation_left",
+    "location": "left",
+    "severity": "moderate"
+  },
+  "consolidation_bilateral_01.png": {
+    "clinical_labels": [
+      "Consolidation",
+      "Infiltration"
+    ],
+    "synthesis_type": "consolidation_bilateral",
+    "pathology": "consolidation_bilateral",
+    "location": "bilateral"
+  },
+  "consolidation_bilateral_02.png": {
+    "clinical_labels": [
+      "Consolidation",
+      "Infiltration"
+    ],
+    "synthesis_type": "consolidation_bilateral",
+    "pathology": "consolidation_bilateral",
+    "location": "bilateral"
+  },
+  "effusion_right_01.png": {
+    "clinical_labels": [
+      "Effusion"
+    ],
+    "synthesis_type": "effusion_right",
+    "pathology": "effusion_right",
+    "location": "right"
+  },
+  "effusion_right_02.png": {
+    "clinical_labels": [
+      "Effusion"
+    ],
+    "synthesis_type": "effusion_right",
+    "pathology": "effusion_right",
+    "location": "right"
+  },
+  "effusion_left_01.png": {
+    "clinical_labels": [
+      "Effusion"
+    ],
+    "synthesis_type": "effusion_left",
+    "pathology": "effusion_left",
+    "location": "left"
+  },
+  "effusion_left_02.png": {
+    "clinical_labels": [
+      "Effusion"
+    ],
+    "synthesis_type": "effusion_left",
+    "pathology": "effusion_left",
+    "location": "left"
+  },
+  "effusion_bilateral_01.png": {
+    "clinical_labels": [
+      "Effusion"
+    ],
+    "synthesis_type": "effusion_bilateral",
+    "pathology": "effusion_bilateral",
+    "location": "bilateral"
+  },
+  "effusion_bilateral_02.png": {
+    "clinical_labels": [
+      "Effusion"
+    ],
+    "synthesis_type": "effusion_bilateral",
+    "pathology": "effusion_bilateral",
+    "location": "bilateral"
+  },
+  "pneumothorax_right_01.png": {
+    "clinical_labels": [
+      "Pneumothorax"
+    ],
+    "synthesis_type": "pneumothorax_right",
+    "pathology": "pneumothorax_right",
+    "location": "right"
+  },
+  "pneumothorax_right_02.png": {
+    "clinical_labels": [
+      "Pneumothorax"
+    ],
+    "synthesis_type": "pneumothorax_right",
+    "pathology": "pneumothorax_right",
+    "location": "right"
+  },
+  "pneumothorax_left_01.png": {
+    "clinical_labels": [
+      "Pneumothorax"
+    ],
+    "synthesis_type": "pneumothorax_left",
+    "pathology": "pneumothorax_left",
+    "location": "left"
+  },
+  "pneumothorax_left_02.png": {
+    "clinical_labels": [
+      "Pneumothorax"
+    ],
+    "synthesis_type": "pneumothorax_left",
+    "pathology": "pneumothorax_left",
+    "location": "left"
+  },
+  "nodule_solitary_01.png": {
+    "clinical_labels": [
+      "Nodule",
+      "Mass"
+    ],
+    "synthesis_type": "nodule_solitary",
+    "pathology": "nodule_solitary",
+    "size_mm": "8-20"
+  },
+  "nodule_solitary_02.png": {
+    "clinical_labels": [
+      "Nodule",
+      "Mass"
+    ],
+    "synthesis_type": "nodule_solitary",
+    "pathology": "nodule_solitary",
+    "size_mm": "8-20"
+  },
+  "nodules_multiple_01.png": {
+    "clinical_labels": [
+      "Nodule",
+      "Mass"
+    ],
+    "synthesis_type": "nodules_multiple",
+    "pathology": "nodules_multiple",
+    "count": "multiple"
+  },
+  "nodules_multiple_02.png": {
+    "clinical_labels": [
+      "Nodule",
+      "Mass"
+    ],
+    "synthesis_type": "nodules_multiple",
+    "pathology": "nodules_multiple",
+    "count": "multiple"
+  },
+  "cardiomegaly_01.png": {
+    "clinical_labels": [
+      "Cardiomegaly"
+    ],
+    "synthesis_type": "cardiomegaly",
+    "pathology": "cardiomegaly",
+    "severity": "moderate-severe"
+  },
+  "cardiomegaly_02.png": {
+    "clinical_labels": [
+      "Cardiomegaly"
+    ],
+    "synthesis_type": "cardiomegaly",
+    "pathology": "cardiomegaly",
+    "severity": "moderate-severe"
+  },
+  "fibrosis_01.png": {
+    "clinical_labels": [
+      "Fibrosis",
+      "Pleural_Thickening"
+    ],
+    "synthesis_type": "fibrosis",
+    "pathology": "fibrosis",
+    "pattern": "reticular"
+  },
+  "fibrosis_02.png": {
+    "clinical_labels": [
+      "Fibrosis",
+      "Pleural_Thickening"
+    ],
+    "synthesis_type": "fibrosis",
+    "pathology": "fibrosis",
+    "pattern": "reticular"
+  },
+  "emphysema_01.png": {
+    "clinical_labels": [
+      "Emphysema"
+    ],
+    "synthesis_type": "emphysema",
+    "pathology": "emphysema",
+    "severity": "moderate"
+  },
+  "emphysema_02.png": {
+    "clinical_labels": [
+      "Emphysema"
+    ],
+    "synthesis_type": "emphysema",
+    "pathology": "emphysema",
+    "severity": "moderate"
+  },
+  "copd_01.png": {
+    "clinical_labels": [
+      "Emphysema",
+      "Cardiomegaly"
+    ],
+    "synthesis_type": "copd",
+    "pathology": "copd",
+    "components": "emphysema + bronchitis"
+  },
+  "copd_02.png": {
+    "clinical_labels": [
+      "Emphysema",
+      "Cardiomegaly"
+    ],
+    "synthesis_type": "copd",
+    "pathology": "copd",
+    "components": "emphysema + bronchitis"
+  },
+  "interstitial_edema_01.png": {
+    "clinical_labels": [
+      "Edema",
+      "Infiltration"
+    ],
+    "synthesis_type": "interstitial_edema",
+    "pathology": "interstitial_edema",
+    "pattern": "alveolar/interstitial"
+  },
+  "interstitial_edema_02.png": {
+    "clinical_labels": [
+      "Edema",
+      "Infiltration"
+    ],
+    "synthesis_type": "interstitial_edema",
+    "pathology": "interstitial_edema",
+    "pattern": "alveolar/interstitial"
+  }
+}

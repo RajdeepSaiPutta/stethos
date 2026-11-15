@@ -1,0 +1,236 @@
+{
+  "normal_01.wav": {
+    "clinical_label": "normal",
+    "synthesis_type": "normal",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "normal_02.wav": {
+    "clinical_label": "normal",
+    "synthesis_type": "normal",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "normal_03.wav": {
+    "clinical_label": "normal",
+    "synthesis_type": "normal",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "crackle_fine_01.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "crackle_fine",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "crackle_fine_02.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "crackle_fine",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "crackle_fine_03.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "crackle_fine",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "crackle_coarse_01.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "crackle_coarse",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "crackle_coarse_02.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "crackle_coarse",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "crackle_coarse_03.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "crackle_coarse",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "wheeze_monophonic_01.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "wheeze_monophonic",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "wheeze_monophonic_02.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "wheeze_monophonic",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "wheeze_monophonic_03.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "wheeze_monophonic",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "wheeze_polyphonic_01.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "wheeze_polyphonic",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "wheeze_polyphonic_02.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "wheeze_polyphonic",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "wheeze_polyphonic_03.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "wheeze_polyphonic",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "rhonchi_01.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "rhonchi",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "rhonchi_02.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "rhonchi",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "rhonchi_03.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "rhonchi",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "bronchial_01.wav": {
+    "clinical_label": "normal",
+    "synthesis_type": "bronchial",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "bronchial_02.wav": {
+    "clinical_label": "normal",
+    "synthesis_type": "bronchial",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "bronchial_03.wav": {
+    "clinical_label": "normal",
+    "synthesis_type": "bronchial",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "pleural_rub_01.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "pleural_rub",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "pleural_rub_02.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "pleural_rub",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "pleural_rub_03.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "pleural_rub",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "stridor_01.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "stridor",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "stridor_02.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "stridor",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "stridor_03.wav": {
+    "clinical_label": "wheeze",
+    "synthesis_type": "stridor",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "copd_01.wav": {
+    "clinical_label": "both",
+    "synthesis_type": "copd",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "copd_02.wav": {
+    "clinical_label": "both",
+    "synthesis_type": "copd",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "copd_03.wav": {
+    "clinical_label": "both",
+    "synthesis_type": "copd",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "pneumonia_01.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "pneumonia",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "pneumonia_02.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "pneumonia",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "pneumonia_03.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "pneumonia",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "interstitial_01.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "interstitial",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "interstitial_02.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "interstitial",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "interstitial_03.wav": {
+    "clinical_label": "crackle",
+    "synthesis_type": "interstitial",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "heart_failure_01.wav": {
+    "clinical_label": "both",
+    "synthesis_type": "heart_failure",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "heart_failure_02.wav": {
+    "clinical_label": "both",
+    "synthesis_type": "heart_failure",
+    "duration": 8.0,
+    "sr": 16000
+  },
+  "heart_failure_03.wav": {
+    "clinical_label": "both",
+    "synthesis_type": "heart_failure",
+    "duration": 8.0,
+    "sr": 16000
+  }
+}

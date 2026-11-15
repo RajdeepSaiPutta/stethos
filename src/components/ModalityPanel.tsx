@@ -184,7 +184,7 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
               </div>
             )}
             {r.xray_image && show3D && (
-              <Xray3DViewer src={r.xray_image} height={520} />
+              <Xray3DViewer src={r.xray_image} maskSrc={r.segmentation_mask} height={520} />
             )}
             {r.xray_image && (
               <button

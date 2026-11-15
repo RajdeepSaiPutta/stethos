@@ -273,12 +273,18 @@ class CXRPlugin(ModalityPlugin):
             except Exception as e:
                 logger.warning(f"Could not encode xray image for 3D viewer: {e}")
 
+        # Segmentation mask (grayscale class IDs) for 3D lung meshes
+        mask_vis = seg_mask.astype(np.uint8)  # 0=bg, 1=left_lung, 2=right_lung, 3=heart, 4=trachea
+        _, mask_buffer = cv2.imencode('.png', mask_vis)
+        mask_b64 = base64.b64encode(mask_buffer).decode('utf-8')
+
         results = {
             "pathologies": pathology_probs,
             "positive_findings": positive_pathologies,
             "measurements": measurements,
             "segmentation_classes": LUNG_CLASSES,
-            "segmentation_overlay": f"data:image/png;base64,{seg_b64}"
+            "segmentation_overlay": f"data:image/png;base64,{seg_b64}",
+            "segmentation_mask": f"data:image/png;base64,{mask_b64}"
         }
         if xray_b64:
             results["xray_image"] = f"data:image/png;base64,{xray_b64}"
