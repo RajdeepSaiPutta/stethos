@@ -5,7 +5,7 @@ import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialo
 import {
   Mic2, Image, Activity, FileText,
   Layers, Settings2, PanelLeftOpen, PanelLeftClose, History,
-  Users,
+  Users, LayoutDashboard,
 } from 'lucide-react'
 import { ModalityPanel } from './components/ModalityPanel'
 import { FusionPanel } from './components/FusionPanel'
@@ -69,6 +69,7 @@ const MODALITIES = [
 
 // every view except the three modality workspaces
 const OTHER_VIEWS: { id: View; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'dashboard', label: 'Session', icon: LayoutDashboard },
   { id: 'fusion', label: 'Fusion', icon: Layers },
   { id: 'history', label: 'History', icon: History },
   { id: 'report', label: 'Report', icon: FileText },

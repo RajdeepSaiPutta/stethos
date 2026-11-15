@@ -24,7 +24,7 @@ interface ModalityPanelProps {
 export function ModalityPanel({ modality, icon: Icon, title, description, result, patientContext, onRun, isProcessing }: ModalityPanelProps) {
   const [dragActive, setDragActive] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [show3D, setShow3D] = useState(false)
+  const [show3D, setShow3D] = useState(true)
 
   // extension allow-list per modality — the source of truth for both the
   // native drag-drop path (paths only, no File object) and the DOM drop path
@@ -184,15 +184,20 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
               </div>
             )}
             {r.xray_image && show3D && (
-              <Xray3DViewer src={r.xray_image} height={380} />
+              <Xray3DViewer src={r.xray_image} height={520} />
             )}
             {r.xray_image && (
               <button
                 onClick={() => setShow3D(!show3D)}
-                className="mono text-[10.5px] self-start"
-                style={{ color: 'var(--text-faint)' }}
+                className="mono text-[10.5px] self-start px-2.5 py-1"
+                style={{
+                  color: show3D ? 'var(--accent)' : 'var(--text)',
+                  border: '1px solid ' + (show3D ? 'var(--accent)' : 'var(--border)'),
+                  borderRadius: 3,
+                  background: show3D ? 'var(--accent-dim)' : 'transparent',
+                }}
               >
-                {show3D ? 'hide 3d view −' : 'show 3d view +'}
+                {show3D ? 'close 3d viewer −' : 'open 3d viewer +'}
               </button>
             )}
           </div>
