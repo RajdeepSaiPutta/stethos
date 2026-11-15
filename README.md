@@ -1,80 +1,109 @@
 # stethos
 
-stethos is a desktop app for respiratory diagnostics. it takes breath sounds, a chest x-ray, or spirometry data, classifies each one, and fuses the findings into a single risk assessment with a per-modality breakdown. reports export as pdf, fhir, dicom-sr, or json.
+local multimodal respiratory ml workstation. desktop app (tauri + rust) with bundled python sidecar for inference.
 
-all inference runs locally in a python sidecar. it uses cuda when an nvidia gpu is present and falls back to cpu otherwise; nothing ever leaves the machine. where no trained checkpoint exists yet, the models fall back to locally-initialized weights so the whole pipeline stays runnable end to end.
+## quick install
 
-built with tauri 2, react, and fastapi.
-
-## install
-
-download the installer for your platform:
-
-- **github releases (cpu, all platforms):**
-  <https://github.com/RajdeepSaiPutta/stethos/releases/tag/v0.1.0>
-- **hugging face (cpu + cuda linux):**
-  <https://huggingface.co/rajdeepp11/stethos>
-
-| platform | installer |
-| --- | --- |
-| windows | `Stethos_<version>_x64-setup.exe` |
-| macos | `Stethos_<version>_aarch64.dmg` |
-| debian / ubuntu | `Stethos_<version>_amd64.deb` |
-| fedora / opensuse | `Stethos-<version>-1.x86_64.rpm` |
-| arch / cachyos | `Stethos-<version>-1-x86_64.pkg.tar.zst` |
-| any linux | `install-linux.sh` + AppImage |
-| linux + nvidia gpu | cuda set under `cuda/linux/` (hugging face only) |
-
-each installer registers stethos in the application menu / start menu / launchpad and bundles the inference engine plus the model weights. no terminal, no python, no separate model download. see [`release/README.md`](release/README.md) for checksums, gpu notes, and uninstall instructions.
-
-## run
-
-**installed app:** launch from your app drawer / start menu / applications. the status bar (bottom right) shows `sidecar connected · models 4/4` and either `cpu` or your gpu name + memory.
-
-**verify gpu path:**
 ```bash
-curl -s http://127.0.0.1:8765/health
+# one-liner (linux)
+curl -fsSL https://raw.githubusercontent.com/RajdeepSaiPutta/stethos/main/install.sh | bash
+
+# or download directly from hugging face
+# https://huggingface.co/rajdeepp11/stethos/tree/main
 ```
-`"device": "cuda"` with a `gpu_name` means gpu acceleration is active. `"device": "cpu"` means it's running on cpu (or metal/mps on apple silicon).
+
+## what's inside
+
+| component | description |
+|-----------|-------------|
+| **breath sounds** | cnn classifier (normal / crackle / wheeze / both) |
+| **chest x-ray** | densenet121 classifier (14 pathologies) + mobilenetv3 u-net segmenter (lungs, heart, trachea) |
+| **spirometry** | pattern classifier (normal / obstructive / restrictive / mixed) |
+| **fusion** | combines all three modalities |
+| **3d lung viewer** | volumetric rendering + mpr quad view + segmentation-driven lung meshes |
+
+## download (cpu installers)
+
+| package | size | distro |
+|---------|------|--------|
+| `Stethos_0.1.0_amd64.deb` | 960 MB | debian/ubuntu/mint |
+| `Stethos-0.1.0-1.x86_64.rpm` | 960 MB | fedora/rhel/opensuse |
+| `Stethos_0.1.0_amd64.AppImage` | 566 MB | any linux (portable) |
+| `Stethos-0.1.0-1-x86_64.pkg.tar.zst` | 470 MB | arch/manjaro |
+
+all on hugging face: **https://huggingface.co/rajdeepp11/stethos/tree/main**
+
+cuda sidecar (3.0 GB) not packaged — run `python/dist-cuda/stethos-sidecar` standalone + dev binary.
+
+## test data
+
+realistic synthetic datasets (hugging face dataset repo: `rajdeepp11/stethos`):
+
+- `breath/` — 39 wav files, 13 conditions
+- `cxr/` — 32 png images, 16 pathologies  
+- `spirometry/` — 32 patients × 4 visits, csv + json
+
+## 3d viewer features
+
+- **quad mpr**: axial / sagittal / coronal / 3d volume
+- **volume rendering**: 72 additive slices, window/level presets (lung, mediastinum, bone, soft tissue)
+- **lung meshes**: built from segmentation mask (distance transform → bulge heightfield → alpha-mapped surface)
+- **render modes**: surface, wireframe, points, volume, **lungs** (anatomical lobes)
+- **measurements**: distance (mm), angle (°), roi
+- **colormaps**: radiograph, bone, thermal, hot-iron, mammography, inverted
 
 ## build from source
 
 ```bash
-npm ci
-node scripts/build-installers.mjs                # installer for this os
+# prerequisites: rust, node, python 3.11+, cuda 12 (optional)
+git clone https://github.com/RajdeepSaiPutta/stethos
+cd stethos
+
+# cpu sidecar
+cd python && pip install -r requirements-sidecar.txt --extra-index-url https://download.pytorch.org/whl/cpu
+pyinstaller --clean -y sidecar.spec
+cp dist/stethos-sidecar ../src-tauri/binaries/
+
+# app
+npm ci && npm run build
+cd src-tauri && cargo build --release
+# or: cargo tauri build --bundles deb,appimage,rpm
 ```
 
-or run in development (two terminals):
+## project structure
 
-```bash
-# terminal 1 - inference sidecar
-cd python && python -m uvicorn api.main:app --port 8765
-
-# terminal 2 - desktop shell
-npm run tauri:dev
+```
+├── src/                    # tauri frontend (react + typescript + three.js)
+│   ├── components/
+│   │   ├── Xray3DViewer.tsx    # 3d mpr + volume + lung meshes
+│   │   ├── ModalityPanel.tsx   # per-modality results + 3d toggle
+│   │   └── ...
+├── src-tauri/              # rust backend + tauri config
+│   ├── src/
+│   │   ├── main.rs           # commands, sidecar management
+│   │   └── sidecar_manager.rs
+│   └── tauri.conf.json
+├── python/                 # fastapi sidecar
+│   ├── api/main.py         # endpoints: /health, /inference, /fusion, /device
+│   ├── plugins/
+│   │   ├── cxr.py          # classification + segmentation (returns mask)
+│   │   ├── breath.py
+│   │   ├── spirometry.py
+│   │   └── fusion.py
+│   ├── make_realistic_*.py # test data generators
+│   └── dist-cpu/           # cpu sidecar binary
+├── test-data/              # sample inputs (git)
+├── install.sh              # universal one-line installer
+└── scripts/                # installer builders
 ```
 
-### gpu acceleration (local build only)
+## citation
 
-the packaged sidecar detects cuda at runtime. a cpu-only pytorch wheel still runs everything, but reports `"device": "cpu"`. to produce a cuda-bundled installer, build the sidecar with a cuda torch install:
-
-```bash
-python -m pip install torch torchvision torchaudio \
-  --index-url https://download.pytorch.org/whl/cu126
-node scripts/build-installers.mjs
 ```
-
-note: cuda builds are ~3 gb and only work on linux (built locally). ci builds are cpu-only because the one-file pyinstaller/nsis pipeline can't handle binaries >2 gb, and ci runners have no gpus to test.
-
-## brand assets
-
-all logos, favicons, pwa icons, and os icons are generated from one source image:
-
-```bash
-python scripts/generate-brand-assets.py "/path/to/stethos logo.png"
-npx tauri icon src-tauri/brand/source.png
+@software{stethos,
+  author = {Rajdeep Sai Putta},
+  title = {stethos: local multimodal respiratory ml workstation},
+  year = {2024},
+  url = {https://github.com/RajdeepSaiPutta/stethos}
+}
 ```
-
----
-
-research tool, not a medical device — confirm findings with a clinician.
