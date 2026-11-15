@@ -167,9 +167,10 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
                 ))}
               </div>
             )}
-            {r.segmentation_overlay && (
+            {r.segmentation_overlay && r.xray_image && (
               <div className="relative aspect-square overflow-hidden" style={{ border: '1px solid var(--border)', borderRadius: 4, maxWidth: 420 }}>
-                <img src={r.segmentation_overlay} alt="Segmentation" className="w-full h-full object-cover" />
+                <img src={r.xray_image} alt="Radiograph" className="w-full h-full object-cover" style={{ opacity: 0.7 }} />
+                <img src={r.segmentation_overlay} alt="Segmentation" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.5, mixBlendMode: 'screen' }} />
                 <div className="absolute bottom-2 left-2 right-2 bg-black/75 px-2.5 py-1 text-[10px] font-mono text-gray-300">
                   green lungs · red heart · yellow trachea
                 </div>
