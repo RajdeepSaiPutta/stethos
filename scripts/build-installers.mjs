@@ -81,6 +81,14 @@ function buildSidecar(triple) {
   copyFileSync(built, genericTarget)
   console.log(`sidecar -> ${genericTarget} (${(statSync(genericTarget).size / 1e6).toFixed(0)} MB)`)
   
+  // On Windows, Tauri's tauri_build checks for the resource without .exe extension
+  // Create a copy without .exe so the resource check passes
+  if (PLATFORM === 'windows') {
+    const genericNoExe = join(BIN_DIR, 'stethos-sidecar')
+    copyFileSync(built, genericNoExe)
+    console.log(`sidecar -> ${genericNoExe} (${(statSync(genericNoExe).size / 1e6).toFixed(0)} MB)`)
+  }
+  
   return genericTarget
 }
 
