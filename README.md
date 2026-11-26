@@ -103,7 +103,7 @@ cd src-tauri && cargo build --release
 @software{stethos,
   author = {Rajdeep Sai Putta},
   title = {stethos: local multimodal respiratory ml workstation},
-  year = {2024},
+  year = {2026},
   url = {https://github.com/RajdeepSaiPutta/stethos}
 }
 ```
