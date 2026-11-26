@@ -81,8 +81,7 @@
       }
     },
     "resources": [
-      "binaries/stethos-sidecar",
-      "binaries/stethos-sidecar-x86_64-unknown-linux-gnu"
+      "binaries/stethos-sidecar"
     ]
   }
 }
