@@ -70,10 +70,18 @@ function buildSidecar(triple) {
     throw new Error(`sidecar build did not produce ${built}`)
   }
   mkdirSync(BIN_DIR, { recursive: true })
-  const target = join(BIN_DIR, `stethos-sidecar-${triple}${PLATFORM === 'windows' ? '.exe' : ''}`)
-  copyFileSync(built, target)
-  console.log(`sidecar -> ${target} (${(statSync(target).size / 1e6).toFixed(0)} MB)`)
-  return target
+  
+  // Copy with platform-specific triple (for reference)
+  const tripleTarget = join(BIN_DIR, `stethos-sidecar-${triple}${PLATFORM === 'windows' ? '.exe' : ''}`)
+  copyFileSync(built, tripleTarget)
+  console.log(`sidecar -> ${tripleTarget} (${(statSync(tripleTarget).size / 1e6).toFixed(0)} MB)`)
+  
+  // ALSO copy generic name that Tauri expects in tauri.conf.json / tauri.bundle.conf.json
+  const genericTarget = join(BIN_DIR, `stethos-sidecar${PLATFORM === 'windows' ? '.exe' : ''}`)
+  copyFileSync(built, genericTarget)
+  console.log(`sidecar -> ${genericTarget} (${(statSync(genericTarget).size / 1e6).toFixed(0)} MB)`)
+  
+  return genericTarget
 }
 
 function sha256(file) {
