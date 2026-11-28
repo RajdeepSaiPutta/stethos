@@ -31,11 +31,6 @@ jobs:
             platform: windows
             bundles: nsis,msi
             cuda: false
-          - os: windows-latest
-            label: Windows x64 (CUDA)
-            platform: windows
-            bundles: nsis,msi
-            cuda: true
           - os: macos-latest
             label: macOS arm64
             platform: macos
@@ -72,14 +67,6 @@ jobs:
             sudo apt-get update
             sudo apt-get -y install cuda-toolkit-12-1
           fi
-
-      - name: Install Windows CUDA toolkit
-        if: matrix.platform == 'windows' && matrix.cuda == true
-        run: |
-          # CUDA toolkit should be pre-installed on windows-latest
-          # Verify nvcc is available
-          nvcc --version
-
       - name: Install npm dependencies
         run: npm ci
 
