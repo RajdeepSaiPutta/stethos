@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Upload, Loader2, Download } from 'lucide-react'
+import { Upload, Loader2, Download, Edit } from 'lucide-react'
 import { ConfidenceBadge } from './ConfidenceBadge'
 import { Xray3DViewer } from './Xray3DViewer'
+import { SpirometryRecorder } from './SpirometryRecorder'
 import {
   INSIDE_TAURI,
   isDuplicateDrop,
@@ -16,7 +17,7 @@ interface ModalityPanelProps {
   title: string
   description: string
   result?: any
-  patientContext?: { bmi?: number }
+  patientContext?: { age?: number; sex?: string; height_cm?: number; weight_kg?: number; bmi?: number }
   onRun: (modality: string, filePath?: string) => void
   isProcessing: boolean
 }
@@ -25,6 +26,77 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
   const [dragActive, setDragActive] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [show3D, setShow3D] = useState(true)
+  const [showRecorder, setShowRecorder] = useState(false)
+
+  const handleRecorderSave = async (data: any, format: 'json' | 'csv') => {
+    // Create a blob and trigger download, then run inference on it
+    const parameters: Record<string, number | undefined> = {
+      FVC: parseFloat(data.FVC),
+      FEV1: parseFloat(data.FEV1),
+      FEV1_FVC: parseFloat(data.FEV1_FVC),
+      PEF: parseFloat(data.PEF),
+      FEF25_75: parseFloat(data.FEF25_75),
+      FEF25: parseFloat(data.FEF25) || undefined,
+      FEF50: parseFloat(data.FEF50) || undefined,
+      FEF75: parseFloat(data.FEF75) || undefined,
+      PIF: parseFloat(data.PIF) || undefined,
+      FIVC: parseFloat(data.FIVC) || undefined,
+      TLC: parseFloat(data.TLC) || undefined,
+      RV: parseFloat(data.RV) || undefined,
+      DLCO: parseFloat(data.DLCO) || undefined,
+    }
+    // Filter undefined
+    Object.keys(parameters).forEach((key: string) => {
+      if (parameters[key] === undefined) delete parameters[key]
+    })
+    
+    const jsonData = {
+      date: new Date().toISOString().split('T')[0],
+      age: parseInt(data.age),
+      sex: data.sex,
+      height_cm: parseFloat(data.height_cm),
+      weight_kg: parseFloat(data.weight_kg),
+      pattern: 'normal',
+      flow_volume: {
+        volume_exp: [] as number[],
+        flow_exp: [] as number[],
+        volume_insp: [] as number[],
+        flow_insp: [] as number[],
+      },
+      parameters,
+    }
+
+    let filePath: string
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' })
+      filePath = URL.createObjectURL(blob)
+    } else {
+      const rows = [
+        ['Parameter', 'Value', 'Unit'],
+        ['Age', jsonData.age.toString(), 'years'],
+        ['Sex', jsonData.sex, ''],
+        ['Height', jsonData.height_cm.toString(), 'cm'],
+        ['Weight', jsonData.weight_kg.toString(), 'kg'],
+        ...Object.entries(jsonData.parameters).map(([key, value]) => [
+          key,
+          value != null ? value.toString() : '',
+          ['FVC', 'FEV1', 'FIVC', 'TLC', 'RV'].includes(key) ? 'L' :
+          ['FEV1_FVC'].includes(key) ? 'ratio' :
+          ['DLCO'].includes(key) ? 'mL/min/mmHg' : 'L/s',
+        ]),
+      ]
+      const csv = rows.map(r => r.join(',')).join('\n')
+      const blob = new Blob([csv], { type: 'text/csv' })
+      filePath = URL.createObjectURL(blob)
+    }
+    
+    setShowRecorder(false)
+    onRun(modality, filePath)
+  }
+
+  const handleRecorderCancel = () => {
+    setShowRecorder(false)
+  }
 
   // extension allow-list per modality — the source of truth for both the
   // native drag-drop path (paths only, no File object) and the DOM drop path
@@ -257,10 +329,15 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
         {result?.success ? (
           <div className="w-full">
             <div className="panel p-4">{renderResult()}</div>
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 mt-4 flex-wrap">
               <button onClick={() => onRun(modality)} className="btn-secondary">
                 <Upload className="w-3.5 h-3.5" /> New file
               </button>
+              {modality === 'spirometry' && (
+                <button onClick={() => setShowRecorder(true)} className="btn-secondary">
+                  <Edit className="w-3.5 h-3.5" /> Record test
+                </button>
+              )}
               <button className="btn-ghost">
                 <Download className="w-3.5 h-3.5" /> Export
               </button>
@@ -312,6 +389,21 @@ export function ModalityPanel({ modality, icon: Icon, title, description, result
           <div className="w-full text-center py-10">
             <Loader2 className="w-5 h-5 mx-auto animate-spin text-[var(--text-faint)] mb-3" />
             <p className="mono text-[11px] text-[var(--text-faint)]">processing…</p>
+          </div>
+        )}
+
+        {showRecorder && modality === 'spirometry' && (
+          <div className="w-full mt-4 animate-fade-in">
+            <SpirometryRecorder
+              onSave={handleRecorderSave}
+              onCancel={handleRecorderCancel}
+              initialData={patientContext ? {
+                age: patientContext.age?.toString() || '',
+                sex: (patientContext.sex as 'M' | 'F' | 'O') || 'M',
+                height_cm: patientContext.height_cm?.toString() || '',
+                weight_kg: patientContext.weight_kg?.toString() || '',
+              } : undefined}
+            />
           </div>
         )}
       </div>

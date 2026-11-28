@@ -17,17 +17,30 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            label: Linux x64
+            label: Linux x64 (CPU)
             platform: linux
             bundles: deb,rpm,appimage
+            cuda: false
+          - os: ubuntu-22.04
+            label: Linux x64 (CUDA)
+            platform: linux
+            bundles: deb,rpm,appimage
+            cuda: true
           - os: windows-latest
-            label: Windows x64
+            label: Windows x64 (CPU)
             platform: windows
             bundles: nsis,msi
+            cuda: false
+          - os: windows-latest
+            label: Windows x64 (CUDA)
+            platform: windows
+            bundles: nsis,msi
+            cuda: true
           - os: macos-latest
             label: macOS arm64
             platform: macos
             bundles: app,dmg
+            cuda: false
     steps:
       - uses: actions/checkout@v4
 
@@ -49,41 +62,65 @@ jobs:
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
             librsvg2-dev patchelf rpm
+          # Install CUDA toolkit for CUDA builds
+          if [ "${{ matrix.cuda }}" = "true" ]; then
+            wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
+            sudo mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600
+            wget https://developer.download.nvidia.com/compute/cuda/12.1.0/local_installers/cuda-repo-ubuntu2204-12-1-local_12.1.0-530.30.02-1_amd64.deb
+            sudo dpkg -i cuda-repo-ubuntu2204-12-1-local_12.1.0-530.30.02-1_amd64.deb
+            sudo cp /var/cuda-repo-ubuntu2204-12-1-local/cuda-*-keyring.gpg /usr/share/keyrings/
+            sudo apt-get update
+            sudo apt-get -y install cuda-toolkit-12-1
+          fi
+
+      - name: Install Windows CUDA toolkit
+        if: matrix.platform == 'windows' && matrix.cuda == true
+        run: |
+          # CUDA toolkit should be pre-installed on windows-latest
+          # Verify nvcc is available
+          nvcc --version
 
       - name: Install npm dependencies
         run: npm ci
 
-      # ---- inference sidecar (CPU only on CI) -------------------------------
-      - name: Install Python build dependencies (CPU)
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r python/requirements-sidecar.txt --extra-index-url https://download.pytorch.org/whl/cpu
-
+      # ---- inference sidecar -----------------------------------------------
       - name: Build inference sidecar
         working-directory: python
-        run: python -m PyInstaller --clean -y sidecar.spec
+        env:
+          CUDA_BUILD: ${{ matrix.cuda }}
+        run: |
+          python -m pip install --upgrade pip
+          if [ "${{ matrix.cuda }}" = "true" ]; then
+            echo "Installing CUDA torch..."
+            python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+          else
+            echo "Installing CPU torch..."
+            python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+          fi
+          python -m pip install -r requirements-sidecar.txt
+          python -m PyInstaller --clean -y sidecar.spec
 
       # ---- desktop shell -----------------------------------------------------
       - name: Build installers
-        run: node scripts/build-installers.mjs --bundles ${{ matrix.bundles }}
+        run: node scripts/build-installers.mjs --bundles ${{ matrix.bundles }}${{ matrix.cuda && ' --cuda' || '' }}
 
       - name: Checksums (Linux/macOS)
         if: matrix.platform != 'windows'
         working-directory: release/${{ matrix.platform }}
         run: sha256sum -c SHA256SUMS.txt || shasum -a 256 -c SHA256SUMS.txt
 
-      # The publish job merges all three artifact folders into one directory,
+      # The publish job merges all artifact folders into one directory,
       # so the per-platform checksum and readme files need unique names.
       - name: Give artifacts unique names
         shell: bash
         working-directory: release/${{ matrix.platform }}
         run: |
-          if [ -f SHA256SUMS.txt ]; then mv SHA256SUMS.txt "SHA256SUMS-${{ matrix.platform }}.txt"; fi
-          if [ -f README.md ]; then mv README.md "README-${{ matrix.platform }}.md"; fi
+          if [ -f SHA256SUMS.txt ]; then mv SHA256SUMS.txt "SHA256SUMS-${{ matrix.platform }}${{ matrix.cuda && '-cuda' || '' }}.txt"; fi
+          if [ -f README.md ]; then mv README.md "README-${{ matrix.platform }}${{ matrix.cuda && '-cuda' || '' }}.md"; fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: stethos-${{ matrix.platform }}
+          name: stethos-${{ matrix.platform }}${{ matrix.cuda && '-cuda' || '' }}
           path: release/${{ matrix.platform }}/*
           if-no-files-found: error
 

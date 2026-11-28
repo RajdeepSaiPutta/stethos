@@ -8,8 +8,8 @@ local multimodal respiratory ml workstation. desktop app (tauri + rust) with bun
 # one-liner (linux)
 curl -fsSL https://raw.githubusercontent.com/RajdeepSaiPutta/stethos/main/install.sh | bash
 
-# or download directly from hugging face
-# https://huggingface.co/rajdeepp11/stethos/tree/main
+# or download from GitHub Releases
+# https://github.com/RajdeepSaiPutta/stethos/releases
 ```
 
 ## what's inside
@@ -30,14 +30,17 @@ curl -fsSL https://raw.githubusercontent.com/RajdeepSaiPutta/stethos/main/instal
 | `Stethos-0.1.0-1.x86_64.rpm` | 960 MB | fedora/rhel/opensuse |
 | `Stethos_0.1.0_amd64.AppImage` | 566 MB | any linux (portable) |
 | `Stethos-0.1.0-1-x86_64.pkg.tar.zst` | 470 MB | arch/manjaro |
+| `Stethos_0.1.0_x64.msi` | ~1 GB | windows 10/11 |
+| `Stethos_0.1.0_x64-setup.exe` | ~1 GB | windows 10/11 (NSIS) |
+| `Stethos_0.1.0_aarch64.dmg` | ~1 GB | macOS 11+ (Apple Silicon) |
 
-all on hugging face: **https://huggingface.co/rajdeepp11/stethos/tree/main**
+all on GitHub Releases: **https://github.com/RajdeepSaiPutta/stethos/releases**
 
 cuda sidecar (3.0 GB) not packaged — run `python/dist-cuda/stethos-sidecar` standalone + dev binary.
 
 ## test data
 
-realistic synthetic datasets (hugging face dataset repo: `rajdeepp11/stethos`):
+realistic synthetic datasets (included in `test-data/`):
 
 - `breath/` — 39 wav files, 13 conditions
 - `cxr/` — 32 png images, 16 pathologies  
