@@ -40,6 +40,7 @@ const DEFAULT_BUNDLES = {
 const bundles = option('--bundles', DEFAULT_BUNDLES[PLATFORM])
 const withSidecar = !flag('--no-sidecar')
 const withCuda = flag('--cuda')
+const withRocm = flag('--rocm')
 
 function run(command, cmdArgs, cwd = ROOT) {
   console.log(`\n$ ${command} ${cmdArgs.join(' ')}`)
@@ -66,11 +67,17 @@ function buildSidecar(triple) {
     const python = process.env.PYTHON || (PLATFORM === 'windows' ? 'python' : 'python3')
     console.log('\nSidecar binary not found - building it with PyInstaller...')
     
-    // Install torch (CPU or CUDA depending on flag)
-    const torchIndexUrl = withCuda 
-      ? 'https://download.pytorch.org/whl/cu121'  // CUDA 12.1
-      : 'https://download.pytorch.org/whl/cpu'
-    console.log(`Installing torch${withCuda ? ' (CUDA)' : ' (CPU)'}...`)
+    // Install torch (CPU, CUDA, or ROCm depending on flag)
+    let torchIndexUrl = 'https://download.pytorch.org/whl/cpu'
+    let torchVariant = 'CPU'
+    if (withCuda) {
+      torchIndexUrl = 'https://download.pytorch.org/whl/cu121'
+      torchVariant = 'CUDA'
+    } else if (withRocm) {
+      torchIndexUrl = 'https://download.pytorch.org/whl/rocm6.1'
+      torchVariant = 'ROCm'
+    }
+    console.log(`Installing torch (${torchVariant})...`)
     run(python, ['-m', 'pip', 'install', '--upgrade', 'pip'], PYTHON_DIR)
     run(python, ['-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', torchIndexUrl], PYTHON_DIR)
     

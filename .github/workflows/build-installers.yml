@@ -21,21 +21,31 @@ jobs:
             platform: linux
             bundles: deb,rpm,appimage
             cuda: false
+            rocm: false
           - os: ubuntu-22.04
             label: Linux x64 (CUDA)
             platform: linux
             bundles: deb,rpm,appimage
             cuda: true
+            rocm: false
+          - os: ubuntu-22.04
+            label: Linux x64 (ROCm)
+            platform: linux
+            bundles: deb,rpm,appimage
+            cuda: false
+            rocm: true
           - os: windows-latest
             label: Windows x64 (CPU)
             platform: windows
             bundles: nsis,msi
             cuda: false
+            rocm: false
           - os: macos-latest
             label: macOS arm64
             platform: macos
             bundles: app,dmg
             cuda: false
+            rocm: false
     steps:
       - uses: actions/checkout@v4
 
@@ -67,6 +77,16 @@ jobs:
             sudo apt-get update
             sudo apt-get -y install cuda-toolkit-12-1
           fi
+          # Install ROCm for ROCm builds
+          if [ "${{ matrix.rocm }}" = "true" ]; then
+            sudo apt-get update && sudo apt-get install -y wget gnupg2
+            wget -qO - https://repo.radeon.com/rocm/rocm.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/rocm.gpg
+            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/rocm.gpg] https://repo.radeon.com/rocm/apt/6.1 ubuntu main" | sudo tee /etc/apt/sources.list.d/rocm.list
+            sudo apt-get update
+            sudo apt-get install -y rocm-dev rocm-libs hipblas hipsparse rccl rocfft rocm-smi rocminfo
+            echo 'export PATH=/opt/rocm-6.1.0/bin:$PATH' >> $GITHUB_ENV
+            echo 'export HIP_PATH=/opt/rocm-6.1.0' >> $GITHUB_ENV
+          fi
       - name: Install npm dependencies
         run: npm ci
 
@@ -75,11 +95,15 @@ jobs:
         working-directory: python
         env:
           CUDA_BUILD: ${{ matrix.cuda }}
+          ROCM_BUILD: ${{ matrix.rocm }}
         run: |
           python -m pip install --upgrade pip
           if [ "${{ matrix.cuda }}" = "true" ]; then
             echo "Installing CUDA torch..."
             python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+          elif [ "${{ matrix.rocm }}" = "true" ]; then
+            echo "Installing ROCm torch..."
+            python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.1
           else
             echo "Installing CPU torch..."
             python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
@@ -89,7 +113,7 @@ jobs:
 
       # ---- desktop shell -----------------------------------------------------
       - name: Build installers
-        run: node scripts/build-installers.mjs --bundles ${{ matrix.bundles }}${{ matrix.cuda && ' --cuda' || '' }}
+        run: node scripts/build-installers.mjs --bundles ${{ matrix.bundles }}${{ matrix.cuda && ' --cuda' || '' }}${{ matrix.rocm && ' --rocm' || '' }}
 
       - name: Checksums (Linux/macOS)
         if: matrix.platform != 'windows'
@@ -102,12 +126,15 @@ jobs:
         shell: bash
         working-directory: release/${{ matrix.platform }}
         run: |
-          if [ -f SHA256SUMS.txt ]; then mv SHA256SUMS.txt "SHA256SUMS-${{ matrix.platform }}${{ matrix.cuda && '-cuda' || '' }}.txt"; fi
-          if [ -f README.md ]; then mv README.md "README-${{ matrix.platform }}${{ matrix.cuda && '-cuda' || '' }}.md"; fi
+          suffix=""
+          if [ "${{ matrix.cuda }}" = "true" ]; then suffix="-cuda"; fi
+          if [ "${{ matrix.rocm }}" = "true" ]; then suffix="-rocm"; fi
+          if [ -f SHA256SUMS.txt ]; then mv SHA256SUMS.txt "SHA256SUMS-${{ matrix.platform }}${suffix}.txt"; fi
+          if [ -f README.md ]; then mv README.md "README-${{ matrix.platform }}${suffix}.md"; fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: stethos-${{ matrix.platform }}${{ matrix.cuda && '-cuda' || '' }}
+          name: stethos-${{ matrix.platform }}${{ matrix.cuda && '-cuda' || '' }}${{ matrix.rocm && '-rocm' || '' }}
           path: release/${{ matrix.platform }}/*
           if-no-files-found: error
 
